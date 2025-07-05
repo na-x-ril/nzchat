@@ -181,7 +181,7 @@ export function ChatMessage({
 
             <div
               className={cn(
-                "rounded-2xl px-4 py-3 max-w-full break-words transition-all hover:shadow-md relative",
+                "rounded-2xl px-4 py-3 pb-1 pt-2 pr-3 max-w-full break-words transition-all hover:shadow-md relative",
                 isOwnMessage
                   ? "bg-blue-500 text-white rounded-br-md hover:bg-blue-600"
                   : "bg-gray-100 text-gray-900 rounded-bl-md hover:bg-gray-200",
@@ -228,7 +228,7 @@ export function ChatMessage({
               <p className={cn("flex text-sm leading-relaxed", isOwnMessage ? "justify-end" : "justify-start")}>{content} {fileAttachment ? fileAttachment.fileId : ""}</p>
 
               {/* Timestamp in bottom right corner */}
-              <div className={cn("text-xs mt-2 flex justify-end", isOwnMessage ? "text-blue-100" : "text-gray-500")}>
+              <div className={cn("text-[0.65rem] mt-2 flex justify-end", isOwnMessage ? "text-blue-100" : "text-gray-500")}>
                 <span>{new Date(timestamp).toLocaleTimeString()}</span>
                 {/* Message status indicators for own messages */}
                 {isOwnMessage && <span className="ml-1">✓✓</span>}

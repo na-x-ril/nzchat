@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useUser } from "@clerk/nextjs"
 import { useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
@@ -12,14 +12,15 @@ import { useRouter } from "next/navigation"
 export function BanCheck() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
+  const [open, setOpen] = useState(true)
 
-  // Only query if user is loaded and exists
   const currentUser = useQuery(api.users.getCurrentUser, user && isLoaded ? { clerkId: user.id } : "skip")
 
   useEffect(() => {
     if (isLoaded && user && currentUser === null) {
-      // This will trigger if user is banned (getCurrentUser throws error)
-      // The error is caught by the query system
+      setOpen(true)
+    } else {
+      setOpen(false)
     }
   }, [isLoaded, user, currentUser])
 
@@ -29,19 +30,17 @@ export function BanCheck() {
       router.push("/")
       window.location.reload()
     } catch (error) {
-      // Fallback: redirect to home
       router.push("/")
       window.location.reload()
     }
   }
 
-  // Show ban dialog if user is loaded but currentUser is null due to ban
   const isBanned = isLoaded && user && currentUser === null
 
   if (!isBanned) return null
 
   return (
-    <Dialog open={true}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">

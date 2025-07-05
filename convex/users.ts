@@ -10,34 +10,34 @@ export const createUser = mutation({
     imageUrl: v.string(),
   },
   handler: async (ctx, args) => {
-    // Check if username already exists
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.username))
-      .first()
+      .first();
 
     if (existingUser) {
-      throw new Error("Username already taken")
+      return { success: false, message: "Username already taken" };
     }
 
-    // Check if user already exists with this Clerk ID
     const existingClerkUser = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
-      .first()
+      .first();
 
     if (existingClerkUser) {
-      throw new Error("User already exists")
+      return { success: false, message: "User already exists" };
     }
 
-    return await ctx.db.insert("users", {
+    const inserted = await ctx.db.insert("users", {
       ...args,
       isBanned: false,
-      showSpeedDialog: true, // Show speed dialog by default for new users
+      showSpeedDialog: true,
       createdAt: Date.now(),
-    })
+    });
+
+    return { success: true, userId: inserted };
   },
-})
+});
 
 export const updateConnectionSpeed = mutation({
   args: {

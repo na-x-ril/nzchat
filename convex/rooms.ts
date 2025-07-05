@@ -95,15 +95,15 @@ export const joinRoom = mutation({
       throw new Error("User is already a member of this room")
     }
 
-    // Check if user was kicked recently (within 24 hours)
+    // Check if user was kicked recently (within 5 hours)
     const recentKick = await ctx.db
       .query("kickedUsers")
       .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.userId))
       .order("desc")
       .first()
 
-    if (recentKick && Date.now() - recentKick.kickedAt < 24 * 60 * 60 * 1000) {
-      throw new Error("You were recently kicked from this room. Please wait 24 hours before rejoining.")
+    if (recentKick && Date.now() - recentKick.kickedAt < 5 * 60 * 60 * 1000) {
+      throw new Error("You were recently kicked from this room. Please wait 5 hours before rejoining.")
     }
 
     return await ctx.db.insert("roomMembers", {
