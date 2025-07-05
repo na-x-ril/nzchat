@@ -48,14 +48,12 @@ export function BanCheck() {
             <Ban className="w-6 h-6" />
             Account Banned
           </DialogTitle>
-          <DialogDescription className="text-center py-4">
+          <DialogDescription asChild className="text-center py-4">
             <div className="flex flex-col items-center gap-4">
               <AlertTriangle className="w-16 h-16 text-red-500" />
               <div className="space-y-2">
                 <p className="font-medium">Your account has been banned from this application.</p>
-                <p className="text-sm text-gray-600">
-                  If you believe this is a mistake, please contact the administrator.
-                </p>
+                <p className="text-sm text-gray-600">If you believe this is a mistake, please contact the administrator.</p>
               </div>
             </div>
           </DialogDescription>
