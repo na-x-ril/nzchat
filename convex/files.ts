@@ -1,0 +1,177 @@
+import { mutation, query } from "./_generated/server"
+import { v } from "convex/values"
+import type { Id } from "./_generated/dataModel"
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx, args) => {
+    return await ctx.storage.generateUploadUrl()
+  },
+})
+
+export const sendFileMessage = mutation({
+  args: {
+    roomId: v.id("rooms"),
+    userId: v.id("users"),
+    fileId: v.id("_storage"),
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+    content: v.optional(v.string()), // Optional caption
+    replyToId: v.optional(v.id("messages")),
+  },
+  handler: async (ctx, args) => {
+    // Check if user can send messages (member, admin, owner, or CEO)
+    const user = await ctx.db.get(args.userId)
+    const isCEO = user?.username === "onlynazril7z"
+
+    if (!isCEO) {
+      const membership = await ctx.db
+        .query("roomMembers")
+        .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.userId))
+        .first()
+
+      if (!membership || membership.isBlocked) {
+        throw new Error("You must be a member to send messages")
+      }
+    }
+
+    // Check if user is muted
+    const muted = await ctx.db
+      .query("mutedUsers")
+      .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.userId))
+      .first()
+
+    if (muted && (!muted.expiresAt || muted.expiresAt > Date.now())) {
+      throw new Error("You are muted in this room")
+    }
+
+    // Get reply-to message if specified
+    let replyTo: { messageId: Id<"messages">; content: string; username: string } | undefined = undefined
+    if (args.replyToId) {
+      const replyMessage = await ctx.db.get(args.replyToId)
+      if (replyMessage) {
+        const replyUser = await ctx.db.get(replyMessage.userId)
+        replyTo = {
+          messageId: replyMessage._id,
+          content: replyMessage.content,
+          username: replyUser?.username || "Unknown",
+        }
+      }
+    }
+
+    // Determine message content based on whether caption is provided
+    let messageContent: string
+
+    if (args.content && args.content.trim()) {
+      // If caption is provided, use only the caption
+      messageContent = args.content.trim()
+    } else {
+      // If no caption, show file indicator with filename
+      if (args.fileType.startsWith("image/")) {
+        messageContent = `📷 Shared an image: ${args.fileName}`
+      } else if (args.fileType.startsWith("video/")) {
+        messageContent = `🎥 Shared a video: ${args.fileName}`
+      } else if (args.fileType.startsWith("audio/")) {
+        messageContent = `🎵 Shared an audio: ${args.fileName}`
+      } else {
+        messageContent = `📎 Shared a file: ${args.fileName}`
+      }
+    }
+
+    const messageId = await ctx.db.insert("messages", {
+      roomId: args.roomId,
+      userId: args.userId,
+      content: messageContent,
+      fileAttachment: {
+        fileId: args.fileId,
+        fileName: args.fileName,
+        fileType: args.fileType,
+        fileSize: args.fileSize,
+      },
+      replyTo,
+      createdAt: Date.now(),
+    })
+
+    // Get the file URL for logging
+    const fileUrl = await ctx.storage.getUrl(args.fileId)
+
+    // Log the file upload
+    console.log(`File uploaded and shared:`, {
+      messageId: messageId,
+      userId: args.userId,
+      username: user?.username || "Unknown",
+      roomId: args.roomId,
+      fileName: args.fileName,
+      fileType: args.fileType,
+      fileSize: args.fileSize,
+      fileUrl: fileUrl,
+      hasCaption: !!args.content?.trim(),
+      timestamp: new Date().toISOString(),
+    })
+
+    // Add to audit logs for tracking
+    await ctx.db.insert("auditLogs", {
+      roomId: args.roomId,
+      actionBy: args.userId,
+      actionType: "file_upload",
+      targetUserId: args.userId,
+      metadata: {
+        messageId: messageId,
+        fileName: args.fileName,
+        fileType: args.fileType,
+        fileSize: args.fileSize,
+        fileUrl: fileUrl,
+        hasCaption: !!args.content?.trim(),
+      },
+      createdAt: Date.now(),
+    })
+
+    return messageId
+  },
+})
+
+export const getFileUrl = query({
+  args: { fileId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    // // Defensive: Remove any stray quotes
+    // const cleanId = typeof args.fileId === "string" ? args.fileId.replace(/['"]/g, "") : args.fileId
+    return await ctx.storage.getUrl(args.fileId)
+  },
+})
+
+export const getFileUploadLogs = query({
+  args: {
+    roomId: v.optional(v.id("rooms")),
+    userId: v.optional(v.id("users")),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    let baseQuery = ctx.db.query("auditLogs")
+
+    let logsQuery
+    if (args.roomId) {
+      logsQuery = baseQuery.withIndex("by_room", (q) => q.eq("roomId", args.roomId))
+    } else {
+      logsQuery = baseQuery
+    }
+
+    const logs = await logsQuery
+      .filter((q) => q.eq(q.field("actionType"), "file_upload"))
+      .order("desc")
+      .take(args.limit || 50)
+
+    const logsWithUserInfo = await Promise.all(
+      logs.map(async (log) => {
+        const user = await ctx.db.get(log.actionBy)
+        return {
+          ...log,
+          username: user?.username || "Unknown",
+          userImageUrl: user?.imageUrl || "",
+        }
+      }),
+    )
+
+    return logsWithUserInfo
+  },
+})
