@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useQuery, useMutation } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { useUser } from "@clerk/nextjs"
@@ -26,11 +25,14 @@ import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { ConnectionSpeedDialog } from "@/components/connection-speed-dialog"
+import { ROOM_LIMITS } from "@/lib/limits"
+import { checkCEO } from "@/packages/shared/admin"
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const currentUser = useQuery(api.users.getCurrentUser, user ? { clerkId: user.id } : "skip")
+  const createUser = useMutation(api.users.createUser) // Add createUser mutation
   const rooms = useQuery(api.rooms.getAllRooms)
   const createRoom = useMutation(api.rooms.createRoom)
   const { toast } = useToast()
@@ -40,13 +42,7 @@ export default function DashboardPage() {
   const [roomDescription, setRoomDescription] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [showSpeedDialog, setShowSpeedDialog] = useState(false)
-
-  // Redirect to onboarding if user exists but no currentUser record
-  useEffect(() => {
-    if (isLoaded && user && currentUser === null) {
-      router.push("/onboarding")
-    }
-  }, [isLoaded, user, currentUser, router])
+  const [isCreatingUser, setIsCreatingUser] = useState(false)
 
   // Show connection speed dialog if needed
   useEffect(() => {
@@ -55,30 +51,67 @@ export default function DashboardPage() {
     }
   }, [currentUser])
 
+  // Create user if not exists
+  useEffect(() => {
+    if (isLoaded && user && !currentUser && !isCreatingUser) {
+      setIsCreatingUser(true)
+      const createNewUser = async () => {
+        try {
+          const result = await createUser({
+            clerkId: user.id,
+            email: user.primaryEmailAddress?.emailAddress || "unknown@example.com",
+            username: user.username || user.firstName || `user-${Date.now()}`,
+            name: user.fullName || user.firstName || "Unnamed User",
+            imageUrl: user.imageUrl || "",
+          })
+
+          if (!result.success) {
+            toast({
+              title: "Error",
+              description: result.message || "Failed to create user account.",
+              variant: "destructive",
+            })
+          }
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to set up your account. Please try again.",
+            variant: "destructive",
+          })
+        } finally {
+          setIsCreatingUser(false)
+        }
+      }
+      createNewUser()
+    }
+  }, [isLoaded, user, currentUser, createUser, toast, isCreatingUser])
+
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!roomName.trim() || !currentUser) return
-
+    
     setIsCreating(true)
     try {
-      const roomId = await createRoom({
+      const result = await createRoom({
         name: roomName.trim(),
         description: roomDescription.trim(),
         ownerId: currentUser._id,
       })
-
+      
       toast({
         title: "Room Created!",
         description: `${roomName} has been created successfully.`,
       })
 
+      router.push(`/room/${result.roomId}`)
       setRoomName("")
       setRoomDescription("")
       setIsCreateDialogOpen(false)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create room. Please try again."
       toast({
         title: "Error",
-        description: "Failed to create room. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -86,7 +119,7 @@ export default function DashboardPage() {
     }
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || isCreatingUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -96,8 +129,8 @@ export default function DashboardPage() {
     )
   }
 
-  if (!user) {
-    router.push("/")
+  if (isLoaded && !user) {
+    router.replace("/sign-in")
     return null
   }
 
@@ -114,13 +147,13 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b fixed h-16 top-0 left-0 right-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2 sm:space-x-4">
               <h1 className="text-lg sm:text-xl font-bold">Chat Rooms</h1>
               <Badge variant="outline" className="text-xs">
-                {currentUser.username === "onlynazril7z" ? "CEO" : "User"}
+                {checkCEO(currentUser?.email) ? "CEO" : "User"}
               </Badge>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -131,7 +164,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-16 space-y-8">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Available Rooms</h2>
@@ -154,7 +187,10 @@ export default function DashboardPage() {
               </DialogHeader>
               <form onSubmit={handleCreateRoom} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="roomName">Room Name</Label>
+                  <div className="flex gap-2">
+                    <Label htmlFor="roomName">Room Name</Label>
+                    <p className="text-xs text-gray-600">Max: {ROOM_LIMITS.NAME_MAX_LENGTH} characters</p>
+                  </div>
                   <Input
                     id="roomName"
                     value={roomName}
@@ -164,7 +200,10 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="roomDescription">Description (Optional)</Label>
+                  <div className="flex gap-2">
+                    <Label htmlFor="roomDescription">Description (Optional)</Label>
+                    <p className="text-xs text-gray-600">Max: {ROOM_LIMITS.DESCRIPTION_MAX_LENGTH} characters</p>
+                  </div>
                   <Textarea
                     id="roomDescription"
                     value={roomDescription}
@@ -191,9 +230,9 @@ export default function DashboardPage() {
             <Card key={room._id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{room.name}</CardTitle>
-                    <CardDescription className="mt-1">{room.description || "No description"}</CardDescription>
+                  <div className="max-w-[80%]">
+                    <CardTitle className="text-lg break-words line-clamp-2">{room.name}</CardTitle>
+                    <CardDescription className="mt-1 max-w-full text-sm break-words line-clamp-2">{room.description || "No description"}</CardDescription>
                   </div>
                   <Badge variant="secondary">
                     <Users className="w-3 h-3 mr-1" />

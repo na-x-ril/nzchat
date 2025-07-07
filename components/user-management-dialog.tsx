@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -14,10 +14,16 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { Crown, Shield, User, UserPlus, UserMinus, Ban, AlertTriangle, Eye, EyeOff } from "lucide-react"
 import type { Id } from "@/convex/_generated/dataModel"
+import { useClerk, useUser } from "@clerk/nextjs"
 
 interface UserManagementDialogProps {
   isOpen: boolean
   onClose: () => void
+  room: {
+    name: string
+    description?: string
+    memberCount?: number
+  }
   roomId: Id<"rooms">
   currentUserId: Id<"users">
   currentUserRole: string
@@ -27,16 +33,21 @@ interface UserManagementDialogProps {
 export function UserManagementDialog({
   isOpen,
   onClose,
+  room,
   roomId,
   currentUserId,
   currentUserRole,
   isCEO,
 }: UserManagementDialogProps) {
   const { toast } = useToast()
+  const { user, isLoaded } = useUser();
   const [selectedAction, setSelectedAction] = useState<string | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(null)
   const [reason, setReason] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const { signOut } = useClerk();
+
+  const userData = useQuery(api.users.getUserByClerkId, user ? { clerkId: user.id } : "skip");
 
   const roomMembers = useQuery(api.rooms.getRoomMembers, { roomId })
   const promoteToAdmin = useMutation(api.rooms.promoteToAdmin)
@@ -49,6 +60,16 @@ export function UserManagementDialog({
   const canKick = isCEO || currentUserRole === "owner" || currentUserRole === "admin"
   const canBlock = isCEO || currentUserRole === "owner"
   const canBan = isCEO
+
+  useEffect(() => {
+    if (!isLoaded || !userData) return;
+
+    if (userData.isBanned) {
+      signOut();
+    }
+  }, [isLoaded, userData, signOut]);
+
+  if (!isLoaded || !userData) return null;
 
   const handleAction = async () => {
     if (!selectedUserId || !selectedAction) return
@@ -151,11 +172,21 @@ export function UserManagementDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Room Management
+          <DialogTitle className="flex flex-col gap-1">
+            <span className="flex items-center gap-2 text-lg font-bold">
+              {room.name}
+            </span>
+            {room.description && (
+              <span className="text-sm text-gray-500">{room.description}</span>
+            )}
+            <span className="text-xs text-gray-400">
+              {room.memberCount || 0} members
+            </span>
           </DialogTitle>
-          <DialogDescription>Manage room members, roles, and permissions</DialogDescription>
+          <DialogDescription className="flex items-center gap-2 text-sm text-gray-600">
+            <Shield className="w-5 h-5" />
+            Manage room members, roles, and permissions
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-96">
@@ -227,7 +258,7 @@ export function UserManagementDialog({
                       </Button>
                     )}
 
-                    {canBan && member.username !== "onlynazril7z" && (
+                    {canBan && member.email !== "onlynazril7z@gmail.com" && (
                       <Button
                         size="sm"
                         variant="destructive"

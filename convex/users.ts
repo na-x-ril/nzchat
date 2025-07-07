@@ -1,5 +1,15 @@
+import { checkCEO } from "@/packages/shared/admin";
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
+
+function sanitizeUsername(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "") // Remove non-alphanumeric characters
+      .slice(0, 20) // Limit length to 20 characters
+  );
+}
 
 export const createUser = mutation({
   args: {
@@ -10,13 +20,21 @@ export const createUser = mutation({
     imageUrl: v.string(),
   },
   handler: async (ctx, args) => {
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
-      .first();
+    // Prioritize name (e.g., Google name from Clerk) for username
+    let desiredUsername = args.name && args.name.trim().length > 0 ? args.name : args.username;
 
-    if (existingUser) {
-      return { success: false, message: "Username already taken" };
+    // Fallback if no valid name or username
+    if (!desiredUsername || desiredUsername.trim().length === 0) {
+      desiredUsername = `user-${Date.now()}`;
+    }
+
+    // Sanitize and ensure username uniqueness
+    let finalUsername = sanitizeUsername(desiredUsername);
+    let suffix = 1;
+    let uniqueUsername = finalUsername;
+    while (await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", uniqueUsername)).first()) {
+      uniqueUsername = `${finalUsername}-${suffix}`;
+      suffix++;
     }
 
     const existingClerkUser = await ctx.db
@@ -30,6 +48,7 @@ export const createUser = mutation({
 
     const inserted = await ctx.db.insert("users", {
       ...args,
+      username: uniqueUsername, // Use the unique username
       isBanned: false,
       showSpeedDialog: true,
       createdAt: Date.now(),
@@ -62,21 +81,36 @@ export const getCurrentUser = query({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .first()
 
-    // Check if user is banned
-    if (user?.isBanned) {
-      throw new Error("Your account has been banned from this application")
+    if (!user) return null
+
+    return {
+      ...user,
+      banned: user.isBanned ?? false,
     }
-
-    return user
   },
 })
 
-export const getUserById = query({
-  args: { userId: v.id("users") },
+export const isUserBanned = query({
+  args: { clerkId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId)
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    return user?.isBanned ?? false;
   },
-})
+});
+
+export const getUserByClerkId = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+  },
+});
 
 export const banUser = mutation({
   args: {
@@ -87,7 +121,7 @@ export const banUser = mutation({
   handler: async (ctx, args) => {
     // Only CEO can ban users
     const banningUser = await ctx.db.get(args.bannedBy)
-    if (banningUser?.username !== "onlynazril7z") {
+    if (!checkCEO(banningUser?.email)) {
       throw new Error("Only CEO can ban users")
     }
 
@@ -97,7 +131,7 @@ export const banUser = mutation({
     }
 
     // Cannot ban CEO
-    if (targetUser.username === "onlynazril7z") {
+    if (checkCEO(targetUser?.email)) {
       throw new Error("Cannot ban CEO")
     }
 
@@ -129,7 +163,7 @@ export const unbanUser = mutation({
   handler: async (ctx, args) => {
     // Only CEO can unban users
     const unbanningUser = await ctx.db.get(args.unbannedBy)
-    if (unbanningUser?.username !== "onlynazril7z") {
+    if (!checkCEO(unbanningUser?.email)) {
       throw new Error("Only CEO can unban users")
     }
 
@@ -157,7 +191,7 @@ export const getAllUsers = query({
   handler: async (ctx, args) => {
     // Only CEO can see all users
     const requester = await ctx.db.get(args.requesterId)
-    if (requester?.username !== "onlynazril7z") {
+    if (!checkCEO(requester?.email)) {
       throw new Error("Only CEO can view all users")
     }
 

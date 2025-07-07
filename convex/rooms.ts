@@ -1,5 +1,7 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
+import { ROOM_LIMITS } from "@/lib/limits";
+import { checkCEO } from "@/packages/shared/admin";
 
 export const createRoom = mutation({
   args: {
@@ -8,22 +10,61 @@ export const createRoom = mutation({
     ownerId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.ownerId);
+    const isCEO = checkCEO(user?.email)
+
+    const MAX_ROOM_NAME_LENGTH = ROOM_LIMITS.NAME_MAX_LENGTH;
+    const MAX_DESCRIPTION_LENGTH = ROOM_LIMITS.DESCRIPTION_MAX_LENGTH;
+    const CREATE_ROOM_COOLDOWN = ROOM_LIMITS.CREATE_COOLDOWN_MS;
+
+    // Validation: Empty name
+    if (args.name.trim().length === 0) {
+      throw new Error("Room name cannot be empty");
+    }
+
+    // Validation: Length only if not CEO
+    if (!isCEO && args.name.trim().length > MAX_ROOM_NAME_LENGTH) {
+      throw new Error(`NAME_TOO_LONG: Room name too long (max ${MAX_ROOM_NAME_LENGTH} chars). Your input has ${args.name.trim().length} chars.`);
+    }
+
+    if (!isCEO && (args.description?.trim().length ?? 0) > MAX_DESCRIPTION_LENGTH) {
+      throw new Error(`DESCRIPTION_TOO_LONG: Description too long (max ${MAX_DESCRIPTION_LENGTH} chars). Your input has ${args.description?.trim().length} chars.`);
+    }
+
+    // Rate limit: 1 room per 10 seconds per user (CEO included)
+    const recentRoom = await ctx.db
+      .query("rooms")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.ownerId))
+      .order("desc")
+      .first();
+
+    if (recentRoom && Date.now() - recentRoom.createdAt < CREATE_ROOM_COOLDOWN) {
+      const secondsRemaining = Math.ceil(
+        (CREATE_ROOM_COOLDOWN - (Date.now() - recentRoom.createdAt)) / 1000
+      );
+      return {
+        error: "RATE_LIMIT",
+        message: `Please wait ${secondsRemaining} seconds before creating another room.`,
+      };
+    }
+
+    // Insert room
     const roomId = await ctx.db.insert("rooms", {
       ...args,
       isActive: true,
       createdAt: Date.now(),
-    })
+    });
 
-    // Add owner as member with owner role
+    // Add owner as member
     await ctx.db.insert("roomMembers", {
       roomId,
       userId: args.ownerId,
       role: "owner",
       joinedAt: Date.now(),
       isBlocked: false,
-    })
+    });
 
-    return roomId
+    return { success: true, roomId };
   },
 })
 
@@ -124,7 +165,7 @@ export const getUserRole = query({
   handler: async (ctx, args) => {
     // Check if user is CEO
     const user = await ctx.db.get(args.userId)
-    if (user?.username === "onlynazril7z") {
+    if (checkCEO(user?.email)) {
       return "owner" // CEO has owner privileges everywhere
     }
 
@@ -154,7 +195,7 @@ export const promoteToAdmin = mutation({
       .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.promotedBy))
       .first()
 
-    const isCEO = promoter?.username === "onlynazril7z"
+    const isCEO = checkCEO(promoter?.email)
     const canPromote = isCEO || promoterRole?.role === "owner" || promoterRole?.role === "admin"
 
     if (!canPromote) {
@@ -212,7 +253,7 @@ export const kickUser = mutation({
       .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.kickedBy))
       .first()
 
-    const isCEO = kicker?.username === "onlynazril7z"
+    const isCEO = checkCEO(kicker?.email)
     const canKick = isCEO || kickerRole?.role === "owner" || kickerRole?.role === "admin"
 
     if (!canKick) {
@@ -236,7 +277,7 @@ export const kickUser = mutation({
 
     // Cannot kick CEO
     const targetUser = await ctx.db.get(args.targetUserId)
-    if (targetUser?.username === "onlynazril7z") {
+    if (checkCEO(targetUser?.email)) {
       throw new Error("Cannot kick CEO")
     }
 
@@ -281,7 +322,7 @@ export const blockUser = mutation({
       .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.blockedBy))
       .first()
 
-    const isCEO = blocker?.username === "onlynazril7z"
+    const isCEO = checkCEO(blocker?.email)
     const canBlock = isCEO || blockerRole?.role === "owner"
 
     if (!canBlock) {
@@ -305,7 +346,7 @@ export const blockUser = mutation({
 
     // Cannot block CEO
     const targetUser = await ctx.db.get(args.targetUserId)
-    if (targetUser?.username === "onlynazril7z") {
+    if (checkCEO(targetUser?.email)) {
       throw new Error("Cannot block CEO")
     }
 
@@ -345,6 +386,7 @@ export const getRoomMembers = query({
         return {
           ...member,
           username: user?.username || "Unknown",
+          email: user?.email || "Unknown",
           name: user?.name || "Unknown",
           imageUrl: user?.imageUrl || "",
         }

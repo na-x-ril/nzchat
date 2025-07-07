@@ -1,0 +1,6 @@
+{
+  "name": "shared",
+  "version": "0.0.1",
+  "main": "admin.ts",
+  "types": "admin.ts"
+}

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ProfileHoverCard } from "@/components/profile-hover-card"
 import { MessageContextMenu } from "@/components/message-context-menu"
@@ -81,10 +82,20 @@ export function ChatMessage({
     }
   }
 
+  const [fileModalData, setFileModalData] = useState<{
+    url: string
+    type: string
+    name: string
+  } | null>(null)
+
+  const handleOpenPreview = (url: string, type: string, name: string) => {
+    setFileModalData({ url, type, name })
+  }
+
   // Don't render if message is deleted for everyone
   if (isDeleted && deletedFor === "everyone") {
     return (
-      <div className={cn("flex gap-3 mb-4 opacity-50", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
+      <div className={cn("flex gap-3 my-2 opacity-50", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
         <div className="flex-shrink-0">
           <Avatar className="w-10 h-10">
             <AvatarImage src={userImageUrl || "/placeholder.svg"} />
@@ -108,7 +119,7 @@ export function ChatMessage({
   // Show deleted for me message
   if (isDeleted && deletedFor === "me") {
     return (
-      <div className={cn("flex gap-3 mb-4 opacity-50", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
+      <div className={cn("flex gap-3 my-2 opacity-50", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
         <div className="flex-shrink-0">
           <Avatar className="w-10 h-10">
             <AvatarImage src={userImageUrl || "/placeholder.svg"} />
@@ -214,7 +225,7 @@ export function ChatMessage({
 
               {/* File attachment preview */}
               {fileAttachment && (
-                <div className="mb-2">
+                <div className="mb-2 w-full max-w-full">
                   <FilePreview
                     fileId={fileAttachment.fileId}
                     fileName={fileAttachment.fileName}
@@ -225,7 +236,7 @@ export function ChatMessage({
               )}
 
               {/* Message content */}
-              <p className={cn("flex text-sm leading-relaxed", isOwnMessage ? "justify-end" : "justify-start")}>{content} {fileAttachment ? fileAttachment.fileId : ""}</p>
+              <p className={cn("flex text-sm leading-relaxed", isOwnMessage ? "justify-end" : "justify-start")}>{content}</p>
 
               {/* Timestamp in bottom right corner */}
               <div className={cn("text-[0.65rem] mt-2 flex justify-end", isOwnMessage ? "text-blue-100" : "text-gray-500")}>

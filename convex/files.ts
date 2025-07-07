@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 import type { Id } from "./_generated/dataModel"
+import { checkCEO } from "@/packages/shared/admin"
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -23,7 +24,7 @@ export const sendFileMessage = mutation({
   handler: async (ctx, args) => {
     // Check if user can send messages (member, admin, owner, or CEO)
     const user = await ctx.db.get(args.userId)
-    const isCEO = user?.username === "onlynazril7z"
+    const isCEO = checkCEO(user?.email)
 
     if (!isCEO) {
       const membership = await ctx.db
@@ -61,22 +62,11 @@ export const sendFileMessage = mutation({
     }
 
     // Determine message content based on whether caption is provided
-    let messageContent: string
+    let messageContent: string = ""
 
     if (args.content && args.content.trim()) {
       // If caption is provided, use only the caption
       messageContent = args.content.trim()
-    } else {
-      // If no caption, show file indicator with filename
-      if (args.fileType.startsWith("image/")) {
-        messageContent = `📷 Shared an image: ${args.fileName}`
-      } else if (args.fileType.startsWith("video/")) {
-        messageContent = `🎥 Shared a video: ${args.fileName}`
-      } else if (args.fileType.startsWith("audio/")) {
-        messageContent = `🎵 Shared an audio: ${args.fileName}`
-      } else {
-        messageContent = `📎 Shared a file: ${args.fileName}`
-      }
     }
 
     const messageId = await ctx.db.insert("messages", {

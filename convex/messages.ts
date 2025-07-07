@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 import type { Id } from "./_generated/dataModel"
+import { checkCEO } from "@/packages/shared/admin"
 
 export const sendMessage = mutation({
   args: {
@@ -12,7 +13,7 @@ export const sendMessage = mutation({
   handler: async (ctx, args) => {
     // Check if user can send messages (member, admin, owner, or CEO)
     const user = await ctx.db.get(args.userId)
-    const isCEO = user?.username === "onlynazril7z"
+    const isCEO = checkCEO(user?.email)
 
     if (!isCEO) {
       const membership = await ctx.db
@@ -72,7 +73,7 @@ export const deleteMessage = mutation({
     }
 
     const user = await ctx.db.get(args.deletedBy)
-    const isCEO = user?.username === "onlynazril7z"
+    const isCEO = checkCEO(user?.email)
     const isMessageOwner = message.userId === args.deletedBy
 
     // Get user role in room

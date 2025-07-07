@@ -8,7 +8,6 @@ import { api } from "@/convex/_generated/api"
 import { useUser } from "@clerk/nextjs"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ArrowLeft, Users, UserPlus, Crown } from "lucide-react"
 import Link from "next/link"
@@ -17,6 +16,8 @@ import type { Id } from "@/convex/_generated/dataModel"
 import { UserManagementDialog } from "@/components/user-management-dialog"
 import { ChatMessage } from "@/components/chat-message"
 import { ReplyInput } from "@/components/reply-input"
+import { checkCEO } from "@/packages/shared/admin"
+import { resolve } from "path"
 
 interface RoomPageProps {
   params: Promise<{
@@ -53,6 +54,12 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false)
+  const [hasSelectedFile, setHasSelectedFile] = useState(false)
+
+  const handleHeaderClick = () => {
+    setIsUserManagementOpen(true)
+  }
+
   const [replyTo, setReplyTo] = useState<{
     messageId: Id<"messages">
     content: string
@@ -64,8 +71,19 @@ export default function RoomPage({ params }: RoomPageProps) {
   }
 
   useEffect(() => {
+    (async () => {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      scrollToBottom()
+    })()
     scrollToBottom()
   }, [messages])
+
+  useEffect(() => {
+    (async () => {
+      await new Promise(resolve => setTimeout(resolve, 300))
+      scrollToBottom()
+    })()
+  }, [replyTo, hasSelectedFile])
 
   const handleJoinRoom = async () => {
     if (!currentUser || !room) return
@@ -131,8 +149,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   }
 
   const canSendMessages =
-    userRole === "member" || userRole === "admin" || userRole === "owner" || currentUser?.username === "onlynazril7z"
-  const isOwner = userRole === "owner" || currentUser?.username === "onlynazril7z"
+    userRole === "member" || userRole === "admin" || userRole === "owner" || currentUser?.email === "onlynazril7z@gmail.com"
+  const isOwner = userRole === "owner" || currentUser?.email === "onlynazril7z@gmail.com"
   const isAdmin = userRole === "admin" || isOwner
   const canManage = isOwner || isAdmin
 
@@ -148,59 +166,31 @@ export default function RoomPage({ params }: RoomPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Sticky Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-10">
+      {/* Fixed Header */}
+      <header className="bg-white w-full shadow-sm border-b fixed top-0 left-0 right-0 h-16 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 max-w-full">
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
               </Link>
-              <div>
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold flex items-center">
-                  {room.name}
-                  {isOwner && <Crown className="w-4 h-4 ml-2 text-yellow-500" />}
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">{room.description}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Badge variant="outline" className="text-xs">
-                <Users className="w-3 h-3 mr-1" />
-                <span className="hidden sm:inline">{room.memberCount || 0}</span>
-                <span>&nbsp;</span>
-                <span className="hidden sm:inline">members</span>
-              </Badge>
-              <Badge variant={userRole === "visitor" ? "secondary" : "default"} className="text-xs">
-                {userRole === "visitor"
-                  ? "Visitor"
-                  : userRole === "member"
-                    ? "Member"
-                    : userRole === "admin"
-                      ? "Admin"
-                      : userRole === "owner"
-                        ? "Owner"
-                        : "Visitor"}
-              </Badge>
-              {canManage && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsUserManagementOpen(true)}
-                  className="hidden sm:flex"
+              <button
+                onClick={handleHeaderClick}
+                className="text-left flex flex-col max-w-full rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <h1
+                  title={room.name}
+                  className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold flex items-center break-words line-clamp-2"
                 >
-                  <Users className="w-4 h-4 mr-2" />
-                  <span className="hidden md:inline">Manage Users</span>
-                  <span className="md:hidden">Manage</span>
-                </Button>
-              )}
-              {canManage && (
-                <Button size="sm" variant="outline" onClick={() => setIsUserManagementOpen(true)} className="sm:hidden">
-                  <Users className="w-4 h-4" />
-                </Button>
-              )}
+                  {room.name}
+                  {isOwner && <Crown className="w-4 h-4 ml-2 text-yellow-500 shrink-0" />}
+                </h1>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {room.memberCount || 0} members
+                </p>
+              </button>
             </div>
           </div>
         </div>
@@ -209,7 +199,7 @@ export default function RoomPage({ params }: RoomPageProps) {
       {/* Chat Messages Area */}
       <div className="flex-1 flex flex-col">
         <ScrollArea className="flex-1 p-4" style={{ height: "calc(100vh - 64px - 120px)" }}>
-          <div className="max-w-4xl mx-auto">
+          <div className={`max-w-4xl mx-auto mt-16 mb-24 space-y-2 delay-300 transition-all duration-300 ${hasSelectedFile ? "!mb-[10rem] !sm:mb-[10rem]" : ""} ${replyTo ? "!mb-[8.5rem] !sm:mb-[11rem]" : ""}`}>
             {messages?.map((msg) => (
               <ChatMessage
                 key={msg._id}
@@ -224,7 +214,7 @@ export default function RoomPage({ params }: RoomPageProps) {
                 roomId={resolvedParams.roomId as Id<"rooms">}
                 currentUserId={currentUser._id}
                 currentUserRole={userRole || "visitor"}
-                isCEO={currentUser?.username === "onlynazril7z"}
+                isCEO={checkCEO(currentUser?.email)}
                 canManage={canManage}
                 isDeleted={msg.isDeleted}
                 fileAttachment={msg.fileAttachment}
@@ -237,8 +227,9 @@ export default function RoomPage({ params }: RoomPageProps) {
           </div>
         </ScrollArea>
 
-        {/* Sticky Input Area */}
-        <div className="border-t bg-white p-4 sticky bottom-0 z-10 shadow-lg">
+        {/* Fixed Input Area */}
+        <div className={`border-t w-full bg-white p-4 fixed bottom-0 z-10 h-24 shadow-lg transition-all diration-300 h-24 ${hasSelectedFile ? "!h-[10rem] !sm:h-40" : ""} 
+        ${replyTo ? "!h-[8.5rem] !sm:h-[11rem]" : ""}`}>
           <div className="max-w-4xl mx-auto">
             {userRole === "visitor" && (
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
@@ -274,6 +265,7 @@ export default function RoomPage({ params }: RoomPageProps) {
                 isSending={isSending}
                 roomId={resolvedParams.roomId as Id<"rooms">}
                 userId={currentUser._id}
+                onFileSelectChange={setHasSelectedFile}
               />
             )}
 
@@ -286,13 +278,18 @@ export default function RoomPage({ params }: RoomPageProps) {
         </div>
       </div>
 
-      <UserManagementDialog
+     <UserManagementDialog
         isOpen={isUserManagementOpen}
         onClose={() => setIsUserManagementOpen(false)}
+        room={{
+          name: room.name,
+          description: room.description,
+          memberCount: room.memberCount
+        }}
         roomId={resolvedParams.roomId as Id<"rooms">}
         currentUserId={currentUser._id}
         currentUserRole={userRole || "visitor"}
-        isCEO={currentUser?.username === "onlynazril7z"}
+        isCEO={checkCEO(currentUser?.email)}
       />
     </div>
   )
