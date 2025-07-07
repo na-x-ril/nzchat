@@ -199,35 +199,45 @@ export default function RoomPage({ params }: RoomPageProps) {
       <div className="flex-1 flex flex-col">
         <ScrollArea className="flex-1 p-4 pb-24" style={{ minHeight: "calc(100vh - 64px - 120px)" }}>
           <div className={`max-w-4xl mx-auto mt-16 space-y-2 delay-300 transition-all duration-300 ${hasSelectedFile ? "!mb-[10rem] !sm:mb-[10rem]" : ""} ${replyTo ? "!mb-[8.5rem] !sm:mb-[11rem]" : ""}`}>
-            {messages?.map((msg) => (
-              <ChatMessage
-                key={msg._id}
-                messageId={msg._id}
-                userId={msg.userId}
-                username={msg.username}
-                userImageUrl={msg.userImageUrl}
-                content={msg.content}
-                timestamp={msg._creationTime}
-                isOwnMessage={msg.userId === currentUser._id}
-                userRole={getUserRoleFromMembers(msg.userId)}
-                roomId={resolvedParams.roomId as Id<"rooms">}
-                currentUserId={currentUser._id}
-                currentUserRole={userRole || "visitor"}
-                isCEO={checkCEO(currentUser?.email)}
-                canManage={canManage}
-                isDeleted={msg.isDeleted}
-                fileAttachment={msg.fileAttachment}
-                deletedFor={msg.deletedFor as "me" | "everyone" | undefined}
-                replyTo={msg.replyTo}
-                onReply={handleReply}
-              />
-            ))}
+            {messages && messages.length > 0 ? (
+              messages.map((msg) => (
+                <ChatMessage
+                  key={msg._id}
+                  messageId={msg._id}
+                  userId={msg.userId}
+                  username={msg.username}
+                  userImageUrl={msg.userImageUrl}
+                  content={msg.content}
+                  timestamp={msg._creationTime}
+                  isOwnMessage={msg.userId === currentUser._id}
+                  userRole={getUserRoleFromMembers(msg.userId)}
+                  roomId={resolvedParams.roomId as Id<"rooms">}
+                  currentUserId={currentUser._id}
+                  currentUserRole={userRole || "visitor"}
+                  isCEO={checkCEO(currentUser?.email)}
+                  canManage={canManage}
+                  isDeleted={msg.isDeleted}
+                  fileAttachment={msg.fileAttachment}
+                  deletedFor={msg.deletedFor as "me" | "everyone" | undefined}
+                  replyTo={msg.replyTo}
+                  onReply={handleReply}
+                />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center text-center text-gray-500 mt-16 space-y-2">
+                <Users className="w-10 h-10 text-gray-300" />
+                <p className="text-base font-medium">No messages yet</p>
+                <p className="text-sm text-gray-400">
+                  {canSendMessages ? "Start the conversation by sending a message!" : "Messages will appear here once available."}
+                </p>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
 
         {/* Fixed Input Area */}
-        <div className="border-t w-full bg-white p-4 fixed max-md:sticky bottom-0 z-10 shadow-lg transition-all diration-300">
+        <div className="border-t w-full bg-white p-4 fixed bottom-0 z-10 shadow-lg transition-all diration-300">
           <div className="max-w-4xl mx-auto">
             {userRole === "visitor" && (
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
