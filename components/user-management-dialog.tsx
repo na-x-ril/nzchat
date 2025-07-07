@@ -178,7 +178,7 @@ export function UserManagementDialog({
       <DialogContent className="max-w-3xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex flex-col gap-1">
-            <span className="flex items-center gap-2 text-lg font-bold">
+            <span className="flex items-center gap-2 text-lg text-start font-bold">
               {room.name}
             </span>
             {room.description && (

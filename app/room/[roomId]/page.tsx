@@ -227,7 +227,7 @@ export default function RoomPage({ params }: RoomPageProps) {
         </ScrollArea>
 
         {/* Fixed Input Area */}
-        <div className="border-t w-full bg-white p-4 fixed bottom-0 z-10 shadow-lg transition-all diration-300">
+        <div className="border-t w-full bg-white p-4 fixed max-md:sticky bottom-0 z-10 shadow-lg transition-all diration-300">
           <div className="max-w-4xl mx-auto">
             {userRole === "visitor" && (
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
