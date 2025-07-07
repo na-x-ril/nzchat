@@ -16,7 +16,6 @@ interface ReplyInputProps {
     username: string
   } | null
   message: string
-  onFileSelectChange?: (hasFile: boolean) => void
   onMessageChange: (message: string) => void
   onSendMessage: (e: React.FormEvent) => void
   onCancelReply: () => void
@@ -28,7 +27,6 @@ interface ReplyInputProps {
 export function ReplyInput({
   replyTo,
   message,
-  onFileSelectChange,
   onMessageChange,
   onSendMessage,
   onCancelReply,
@@ -66,7 +64,6 @@ export function ReplyInput({
     }
 
     setSelectedFile(file)
-    onFileSelectChange?.(true)
   }
 
   const handleFileUpload = async () => {
@@ -126,7 +123,6 @@ export function ReplyInput({
       })
 
       setSelectedFile(null)
-      onFileSelectChange?.(false)
       onMessageChange("")
       if (replyTo) onCancelReply()
       if (fileInputRef.current) fileInputRef.current.value = ""
@@ -158,7 +154,6 @@ export function ReplyInput({
 
   const handleCancelFile = () => {
     setSelectedFile(null)
-    onFileSelectChange?.(false)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
@@ -173,17 +168,16 @@ export function ReplyInput({
   return (
     <div className="space-y-2">
       {replyTo && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 px-2 h-10 rounded-lg">
+        <div className="bg-blue-50 border-l-4 border-blue-500 px-2 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Reply className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">Replying to {replyTo.username}</span>
+              <span className="text-sm font-medium text-blue-800">Replying to {replyTo.username} : {replyTo.content}</span>
             </div>
             <Button size="sm" variant="ghost" onClick={onCancelReply}>
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <p className="text-sm text-blue-700 mt-1 truncate">{replyTo.content}</p>
         </div>
       )}
 

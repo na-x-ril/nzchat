@@ -27,6 +27,8 @@ const schema = defineSchema({
     ownerId: v.id("users"),
     isActive: v.boolean(),
     createdAt: v.number(),
+    isClosed: v.optional(v.boolean()),
+    closedAt: v.optional(v.number()),
   })
     .index("by_owner", ["ownerId"])
     .index("by_active", ["isActive"]),

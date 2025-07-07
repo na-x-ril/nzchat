@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast"
 import { Crown, Shield, User, UserPlus, UserMinus, Ban, AlertTriangle, Eye, EyeOff } from "lucide-react"
 import type { Id } from "@/convex/_generated/dataModel"
 import { useClerk, useUser } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
+
 
 interface UserManagementDialogProps {
   isOpen: boolean
@@ -46,6 +48,7 @@ export function UserManagementDialog({
   const [reason, setReason] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { signOut } = useClerk();
+  const router = useRouter();
 
   const userData = useQuery(api.users.getUserByClerkId, user ? { clerkId: user.id } : "skip");
 
@@ -61,11 +64,13 @@ export function UserManagementDialog({
   const canBlock = isCEO || currentUserRole === "owner"
   const canBan = isCEO
 
+  const closeRoom = useMutation(api.rooms.closeRoom)
+
   useEffect(() => {
     if (!isLoaded || !userData) return;
 
     if (userData.isBanned) {
-      signOut();
+      router.push("/banned")
     }
   }, [isLoaded, userData, signOut]);
 
@@ -277,6 +282,37 @@ export function UserManagementDialog({
             ))}
           </div>
         </ScrollArea>
+
+        {(canManageUsers) && (
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              if (!confirm("Are you sure you want to close this room? This action cannot be undone.")) return
+
+              try {
+                await closeRoom({
+                  roomId: roomId,
+                  closedBy: currentUserId,
+                })
+
+                toast({
+                  title: "Room Closed",
+                  description: "This room has been closed successfully.",
+                })
+
+                router.push("/dashboard")
+              } catch (error) {
+                toast({
+                  title: "Error",
+                  description: error instanceof Error ? error.message : "Failed to close room",
+                  variant: "destructive",
+                })
+              }
+            }}
+          >
+            Close Room
+          </Button>
+        )}
 
         {selectedAction && selectedUserId && (
           <>

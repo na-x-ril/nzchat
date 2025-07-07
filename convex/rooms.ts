@@ -68,11 +68,39 @@ export const createRoom = mutation({
   },
 })
 
+export const closeRoom = mutation({
+  args: {
+    roomId: v.id("rooms"),
+    closedBy: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId)
+    if (!room) {
+      throw new Error("Room not found")
+    }
+
+    const user = await ctx.db.get(args.closedBy)
+    if (!user) {
+      throw new Error("User not found")
+    }
+
+    if (!checkCEO(user?.email) && room.ownerId !== args.closedBy) {
+      throw new Error("You do not have permission to close this room")
+    }
+
+    await ctx.db.patch(args.roomId, {
+      isClosed: true,
+      closedAt: Date.now(),
+    })
+  },
+})
+
 export const getAllRooms = query({
   handler: async (ctx) => {
     const rooms = await ctx.db
       .query("rooms")
       .withIndex("by_active", (q) => q.eq("isActive", true))
+      .filter(q => q.neq(q.field("isClosed"), true))
       .collect()
 
     const roomsWithDetails = await Promise.all(

@@ -17,7 +17,6 @@ import { UserManagementDialog } from "@/components/user-management-dialog"
 import { ChatMessage } from "@/components/chat-message"
 import { ReplyInput } from "@/components/reply-input"
 import { checkCEO } from "@/packages/shared/admin"
-import { resolve } from "path"
 
 interface RoomPageProps {
   params: Promise<{
@@ -198,8 +197,8 @@ export default function RoomPage({ params }: RoomPageProps) {
 
       {/* Chat Messages Area */}
       <div className="flex-1 flex flex-col">
-        <ScrollArea className="flex-1 p-4" style={{ height: "calc(100vh - 64px - 120px)" }}>
-          <div className={`max-w-4xl mx-auto mt-16 mb-24 space-y-2 delay-300 transition-all duration-300 ${hasSelectedFile ? "!mb-[10rem] !sm:mb-[10rem]" : ""} ${replyTo ? "!mb-[8.5rem] !sm:mb-[11rem]" : ""}`}>
+        <ScrollArea className="flex-1 p-4 pb-24" style={{ minHeight: "calc(100vh - 64px - 120px)" }}>
+          <div className={`max-w-4xl mx-auto mt-16 space-y-2 delay-300 transition-all duration-300 ${hasSelectedFile ? "!mb-[10rem] !sm:mb-[10rem]" : ""} ${replyTo ? "!mb-[8.5rem] !sm:mb-[11rem]" : ""}`}>
             {messages?.map((msg) => (
               <ChatMessage
                 key={msg._id}
@@ -228,8 +227,7 @@ export default function RoomPage({ params }: RoomPageProps) {
         </ScrollArea>
 
         {/* Fixed Input Area */}
-        <div className={`border-t w-full bg-white p-4 fixed bottom-0 z-10 h-24 shadow-lg transition-all diration-300 h-24 ${hasSelectedFile ? "!h-[10rem] !sm:h-40" : ""} 
-        ${replyTo ? "!h-[8.5rem] !sm:h-[11rem]" : ""}`}>
+        <div className="border-t w-full bg-white p-4 fixed bottom-0 z-10 shadow-lg transition-all diration-300">
           <div className="max-w-4xl mx-auto">
             {userRole === "visitor" && (
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
@@ -265,7 +263,6 @@ export default function RoomPage({ params }: RoomPageProps) {
                 isSending={isSending}
                 roomId={resolvedParams.roomId as Id<"rooms">}
                 userId={currentUser._id}
-                onFileSelectChange={setHasSelectedFile}
               />
             )}
 

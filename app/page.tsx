@@ -22,7 +22,7 @@ export default async function HomePage() {
           </SignedOut>
           <SignedIn>
             <div className="text-center space-y-2">
-              <p className="text-sm text-gray-600">Welcome back! Ready to chat?</p>
+              <p className="text-sm text-gray-600 mb-4">Welcome back! Ready to chat?</p>
               <Link href="/dashboard">
                 <Button className="w-full">Go to Dashboard</Button>
               </Link>

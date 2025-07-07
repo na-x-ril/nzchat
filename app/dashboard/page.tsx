@@ -32,7 +32,7 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const currentUser = useQuery(api.users.getCurrentUser, user ? { clerkId: user.id } : "skip")
-  const createUser = useMutation(api.users.createUser) // Add createUser mutation
+  const createUser = useMutation(api.users.createUser)
   const rooms = useQuery(api.rooms.getAllRooms)
   const createRoom = useMutation(api.rooms.createRoom)
   const { toast } = useToast()
@@ -57,21 +57,13 @@ export default function DashboardPage() {
       setIsCreatingUser(true)
       const createNewUser = async () => {
         try {
-          const result = await createUser({
+          await createUser({
             clerkId: user.id,
             email: user.primaryEmailAddress?.emailAddress || "unknown@example.com",
             username: user.username || user.firstName || `user-${Date.now()}`,
             name: user.fullName || user.firstName || "Unnamed User",
             imageUrl: user.imageUrl || "",
           })
-
-          if (!result.success) {
-            toast({
-              title: "Error",
-              description: result.message || "Failed to create user account.",
-              variant: "destructive",
-            })
-          }
         } catch (error) {
           toast({
             title: "Error",

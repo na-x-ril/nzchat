@@ -43,7 +43,7 @@ export const createUser = mutation({
       .first();
 
     if (existingClerkUser) {
-      return { success: false, message: "User already exists" };
+      return { success: true, userId: existingClerkUser._id };
     }
 
     const inserted = await ctx.db.insert("users", {
