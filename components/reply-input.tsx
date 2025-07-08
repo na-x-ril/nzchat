@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useMutation } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ interface ReplyInputProps {
     username: string
   } | null
   message: string
+  setHasSelectedFile: React.Dispatch<React.SetStateAction<boolean>>;
   onMessageChange: (message: string) => void
   onSendMessage: (e: React.FormEvent) => void
   onCancelReply: () => void
@@ -27,6 +28,7 @@ interface ReplyInputProps {
 export function ReplyInput({
   replyTo,
   message,
+  setHasSelectedFile,
   onMessageChange,
   onSendMessage,
   onCancelReply,
@@ -39,6 +41,7 @@ export function ReplyInput({
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
   const sendFileMessage = useMutation(api.files.sendFileMessage)
@@ -64,7 +67,40 @@ export function ReplyInput({
     }
 
     setSelectedFile(file)
+    setHasSelectedFile(true);
   }
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (window.innerWidth < 768) {
+        setTimeout(() => {
+          textareaRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+        }, 250);
+      }
+    };
+
+    const input = textareaRef.current;
+    input?.addEventListener("focus", handleFocus);
+    input?.addEventListener("click", handleFocus);
+
+    return () => {
+      input?.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
+  const handleTouchStart = () => {
+    if (window.innerWidth < 768) {
+      setTimeout(() => {
+        textareaRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 200);
+    }
+  };
 
   const handleFileUpload = async () => {
     if (!selectedFile) return
@@ -140,6 +176,7 @@ export function ReplyInput({
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
+      setHasSelectedFile(true);
     }
   }
 
@@ -154,6 +191,7 @@ export function ReplyInput({
 
   const handleCancelFile = () => {
     setSelectedFile(null)
+    setHasSelectedFile(false);
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
@@ -168,7 +206,7 @@ export function ReplyInput({
   return (
     <div className="space-y-2">
       {replyTo && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 px-2 rounded-lg">
+        <div className="bg-blue-50 border-l-4 border-blue-500 px-3 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Reply className="w-4 h-4 text-blue-600" />
@@ -183,10 +221,10 @@ export function ReplyInput({
 
       {selectedFile && (
         <div className="bg-gray-50 border rounded-lg p-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
+          <div className="flex items-center gap-3 flex-1 max-w-[90%]">
             {getFileIcon(selectedFile.type)}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 break-words max-w-[80%]">{selectedFile.name}</p>
+              <p className="text-sm font-medium text-gray-900 truncate">{selectedFile.name}</p>
               <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
             </div>
           </div>
@@ -249,7 +287,7 @@ export function ReplyInput({
                 type="button"
                 size="sm"
                 variant="ghost"
-                className="h-8 w-8 p-0 hover:bg-gray-100"
+                className="h-8 w-8 p-0 hover:bg-gray-100 sm:w-4 sm:h-4"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading || isSending}
               >
@@ -258,6 +296,8 @@ export function ReplyInput({
             </div>
             <Textarea
               value={message}
+              ref={textareaRef}
+              onTouchStart={handleTouchStart}
               onChange={(e) => onMessageChange(e.target.value)}
               placeholder={selectedFile ? "Add a caption (optional)..." : replyTo ? "Reply to message..." : "Type your message..."}
               className="pl-12 pr-3 rounded-2xl resize-none max-h-48 overflow-y-auto"

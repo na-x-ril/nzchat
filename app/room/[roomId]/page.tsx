@@ -17,6 +17,7 @@ import { UserManagementDialog } from "@/components/user-management-dialog"
 import { ChatMessage } from "@/components/chat-message"
 import { ReplyInput } from "@/components/reply-input"
 import { checkCEO } from "@/packages/shared/admin"
+import { useBreakpoint } from "@/hooks/use-breakpoint"
 
 interface RoomPageProps {
   params: Promise<{
@@ -29,6 +30,7 @@ export default function RoomPage({ params }: RoomPageProps) {
   const { user } = useUser()
   const currentUser = useQuery(api.users.getCurrentUser, user ? { clerkId: user.id } : "skip")
   const room = useQuery(api.rooms.getRoom, { roomId: resolvedParams.roomId as Id<"rooms"> })
+  const breakpoint = useBreakpoint();
 
   // Pass userId only if currentUser exists
   const messages = useQuery(
@@ -133,6 +135,21 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
   }
 
+  const getWrapperPaddingBottom = () => {
+    if (hasSelectedFile && replyTo) {
+      if (breakpoint === "lg" || breakpoint === "xl" || breakpoint === "2xl") return "13rem";
+      if (breakpoint === "sm" || breakpoint === "base") return "13rem";
+    }
+    if (hasSelectedFile) {
+      if (breakpoint === "lg" || breakpoint === "xl" || breakpoint === "2xl") return "10.3rem";
+      if (breakpoint === "sm" || breakpoint === "base") return "10.5rem";
+    }
+    if (replyTo) {
+      if (breakpoint === "sm" || breakpoint === "base") return "9rem";
+    }
+    return "6rem";
+  };
+
   const handleReply = (messageId: Id<"messages">, content: string, username: string) => {
     setReplyTo({ messageId, content, username })
   }
@@ -148,14 +165,14 @@ export default function RoomPage({ params }: RoomPageProps) {
   }
 
   const canSendMessages =
-    userRole === "member" || userRole === "admin" || userRole === "owner" || currentUser?.email === "onlynazril7z@gmail.com"
-  const isOwner = userRole === "owner" || currentUser?.email === "onlynazril7z@gmail.com"
+    userRole === "member" || userRole === "admin" || userRole === "owner" || checkCEO(currentUser?.email)
+  const isOwner = userRole === "owner" || checkCEO(currentUser?.email)
   const isAdmin = userRole === "admin" || isOwner
   const canManage = isOwner || isAdmin
 
   if (!room || !currentUser) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-gray-50 flex items-center justify-center overflow-hidden fixed inset-0">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Loading room...</h2>
         </div>
@@ -164,13 +181,13 @@ export default function RoomPage({ params }: RoomPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-[100dvh] bg-gray-50 flex flex-col overflow-y-auto">
       {/* Fixed Header */}
       <header className="bg-white w-full shadow-sm border-b fixed top-0 left-0 right-0 h-16 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4 max-w-full">
-              <Link href="/dashboard">
+              <Link href="/home">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
@@ -197,8 +214,8 @@ export default function RoomPage({ params }: RoomPageProps) {
 
       {/* Chat Messages Area */}
       <div className="flex-1 flex flex-col">
-        <ScrollArea className="flex-1 p-4 pb-24" style={{ minHeight: "calc(100vh - 64px - 120px)" }}>
-          <div className={`max-w-4xl mx-auto mt-16 space-y-2 delay-300 transition-all duration-300 ${hasSelectedFile ? "!mb-[10rem] !sm:mb-[10rem]" : ""} ${replyTo ? "!mb-[8.5rem] !sm:mb-[11rem]" : ""}`}>
+        <ScrollArea className="flex-1 pt-[4.5rem]" style={{ paddingBottom: getWrapperPaddingBottom() }}>
+          <div className={`max-w-4xl mx-auto space-y-2 delay-300 transition-all duration-300`}>
             {messages && messages.length > 0 ? (
               messages.map((msg) => (
                 <ChatMessage
@@ -240,7 +257,7 @@ export default function RoomPage({ params }: RoomPageProps) {
         <div className="border-t w-full bg-white p-4 fixed bottom-0 z-10 shadow-lg transition-all diration-300">
           <div className="max-w-4xl mx-auto">
             {userRole === "visitor" && (
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <div className="px-3 py-2 bg-blue-50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-blue-900">Join this room to participate</h3>
@@ -268,6 +285,7 @@ export default function RoomPage({ params }: RoomPageProps) {
                 replyTo={replyTo}
                 message={message}
                 onMessageChange={setMessage}
+                setHasSelectedFile={setHasSelectedFile}
                 onSendMessage={handleSendMessage}
                 onCancelReply={handleCancelReply}
                 isSending={isSending}

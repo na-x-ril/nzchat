@@ -28,7 +28,7 @@ import { ConnectionSpeedDialog } from "@/components/connection-speed-dialog"
 import { ROOM_LIMITS } from "@/lib/limits"
 import { checkCEO } from "@/packages/shared/admin"
 
-export default function DashboardPage() {
+export default function HomePage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const currentUser = useQuery(api.users.getCurrentUser, user ? { clerkId: user.id } : "skip")
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
   if (!isLoaded || isCreatingUser) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-[100dvh] bg-gray-50 flex items-center justify-center overflow-hidden fixed inset-0">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Loading...</h2>
         </div>
@@ -128,7 +128,7 @@ export default function DashboardPage() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="h-[100dvh] bg-gray-50 flex items-center justify-center overflow-hidden fixed inset-0">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
           <p className="text-gray-600">Redirecting to complete your profile setup...</p>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <h1 className="text-lg sm:text-xl font-bold">Chat Rooms</h1>
+              <h1 className="text-xl sm:text-xl font-bold">Chat Rooms</h1>
               <Badge variant="outline" className="text-xs">
                 {checkCEO(currentUser?.email) ? "CEO" : "User"}
               </Badge>

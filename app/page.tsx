@@ -1,35 +1,25 @@
-import { SignedIn, SignedOut } from "@clerk/nextjs"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
+"use client";
 
-export default async function HomePage() {
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Sparkles, ArrowUpRight } from "lucide-react";
+
+export default function SplashPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Chat Rooms</CardTitle>
-          <CardDescription>Join real-time conversations with people around the world</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <SignedOut>
-            <div className="text-center">
-              <p className="text-sm text-gray-600 mb-4">Sign in to start chatting</p>
-              <Link href="/sign-in">
-                <Button className="w-full">Sign in with Google</Button>
-              </Link>
-            </div>
-          </SignedOut>
-          <SignedIn>
-            <div className="text-center space-y-2">
-              <p className="text-sm text-gray-600 mb-4">Welcome back! Ready to chat?</p>
-              <Link href="/dashboard">
-                <Button className="w-full">Go to Dashboard</Button>
-              </Link>
-            </div>
-          </SignedIn>
-        </CardContent>
-      </Card>
+    <div className="h-[100dvh] flex flex-col items-center justify-center text-center bg-gradient-to-br from-blue-100 to-indigo-300 fixed inset-0 overflow-hidden">
+      <Sparkles className="w-16 h-16 text-indigo-600 mb-4 animate-pulse" />
+      <h1 className="text-3xl font-bold mb-2">Welcome to NZChat 🚀</h1>
+      <p className="text-gray-600 mb-6 max-w-md">
+        A clean, modern, and fast collaborative chat app built with Next.js, Clerk, Convex, and Tailwind CSS.
+      </p>
+      <div className="flex gap-4 flex-wrap justify-center">
+        <Link href="/home">
+          <Button className="flex bg-white gap-2 text-gray-900 hover:bg-indigo-600 hover:text-white transition-colors">
+            <h1>Get Started</h1>
+            <ArrowUpRight className="h-20 w-20" />
+          </Button>
+        </Link>
+      </div>
     </div>
-  )
+  );
 }

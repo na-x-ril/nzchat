@@ -4,19 +4,20 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
 const isProtectedRoute = createRouteMatcher([
-  "/dashboard(.*)",
+  "/home(.*)",
   "/room(.*)",
+  // tambahkan route lain yang memang perlu proteksi
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = auth();
 
-  // Jika user belum login di protected route, redirect ke sign-in
+  // Biarkan / publik
   if (isProtectedRoute(req) && !userId) {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
-  // Jika user login di protected route, cek banned
+  // Ban check
   if (isProtectedRoute(req) && userId) {
     try {
       const banned = await fetchQuery(api.users.isUserBanned, { clerkId: userId });
@@ -25,7 +26,6 @@ export default clerkMiddleware(async (auth, req) => {
       }
     } catch (err) {
       console.error("[Middleware Ban Check Error]", err);
-      // Optional: Redirect to error page or allow if fetchQuery fails
     }
   }
 

@@ -23,11 +23,11 @@ export default async function RootLayout({
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/dashboard"
+      signInFallbackRedirectUrl="/home"
     >
       <html lang="en">
-        <body className={inter.className}>
-          <ConvexProvider dynamic>
+        <body className={`${inter.className} h-[100dvh] overflow-hidden`}>
+          <ConvexProvider>
             {children}
             <Toaster />
           </ConvexProvider>

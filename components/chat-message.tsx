@@ -141,7 +141,7 @@ export function ChatMessage({
   }
 
   return (
-    <div className={cn("flex gap-3 mb-4", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
+    <div className={cn("flex gap-3 mb-4 px-2", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
       <div className="flex-shrink-0">
         <ProfileHoverCard
           userId={userId}
