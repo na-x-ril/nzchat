@@ -215,7 +215,7 @@ export default function RoomPage({ params }: RoomPageProps) {
       {/* Chat Messages Area */}
       <div className="flex-1 flex flex-col">
         <ScrollArea className="flex-1 pt-[4.5rem]" style={{ paddingBottom: getWrapperPaddingBottom() }}>
-          <div className={`max-w-4xl mx-auto space-y-2 delay-300 transition-all duration-300`}>
+          <div className="mx-auto space-y-2 delay-300 transition-all duration-300">
             {messages && messages.length > 0 ? (
               messages.map((msg) => (
                 <ChatMessage

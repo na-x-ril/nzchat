@@ -6,7 +6,6 @@ import { api } from "@/convex/_generated/api";
 const isProtectedRoute = createRouteMatcher([
   "/home(.*)",
   "/room(.*)",
-  // tambahkan route lain yang memang perlu proteksi
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
