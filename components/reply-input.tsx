@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useMutation } from "convex/react"
-import { api } from "@/convex/_generated/api"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Paperclip, X, Image } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { X, Reply, Paperclip, ImageIcon, Video, Music } from "lucide-react"
 import type { Id } from "@/convex/_generated/dataModel"
-import { Textarea } from "./ui/textarea"
+import { api } from "@/convex/_generated/api"
+import { useMutation } from "convex/react"
+import { AutosizeTextarea } from "./ui/autosize-textarea"
 
 interface ReplyInputProps {
   replyTo: {
@@ -15,130 +17,67 @@ interface ReplyInputProps {
     content: string
     username: string
   } | null
-  message: string
-  setHasSelectedFile: React.Dispatch<React.SetStateAction<boolean>>;
-  onMessageChange: (message: string) => void
-  onSendMessage: (e: React.FormEvent) => void
   onCancelReply: () => void
-  isSending: boolean
   roomId: Id<"rooms">
   userId: Id<"users">
+  onMessageSent: () => void
 }
 
 export function ReplyInput({
   replyTo,
-  message,
-  setHasSelectedFile,
-  onMessageChange,
-  onSendMessage,
   onCancelReply,
-  isSending,
   roomId,
   userId,
+  onMessageSent,
 }: ReplyInputProps) {
-  const { toast } = useToast()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
+  const [isOpen, setIsOpen] = useState(false)
+  const [message, setMessage] = useState("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [isSending, setIsSending] = useState(false)
+  const { toast } = useToast()
 
+  const sendMessage = useMutation(api.messages.sendMessage)
   const generateUploadUrl = useMutation(api.files.generateUploadUrl)
   const sendFileMessage = useMutation(api.files.sendFileMessage)
 
-  const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith("image/")) return <ImageIcon className="w-4 h-4" />
-    if (fileType.startsWith("video/")) return <Video className="w-4 h-4" />
-    if (fileType.startsWith("audio/")) return <Music className="w-4 h-4" />
-    return <ImageIcon className="w-4 h-4" />
-  }
+  const modalRef = useRef<HTMLFormElement | null>(null)
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    if (file.size > 50 * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: "Please select a file smaller than 50MB",
-        variant: "destructive",
-      })
-      return
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOpen && modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+        setSelectedFile(null)
+        onCancelReply()
+      }
     }
-
-    setSelectedFile(file)
-    setHasSelectedFile(true);
-  }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [isOpen, onCancelReply])
 
   useEffect(() => {
-    const handleFocus = () => {
-      if (window.innerWidth < 768) {
-        setTimeout(() => {
-          textareaRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-          });
-        }, 250);
-      }
-    };
-
-    const input = textareaRef.current;
-    input?.addEventListener("focus", handleFocus);
-    input?.addEventListener("click", handleFocus);
-
-    return () => {
-      input?.removeEventListener("focus", handleFocus);
-    };
-  }, []);
-
-  const handleTouchStart = () => {
-    if (window.innerWidth < 768) {
-      setTimeout(() => {
-        textareaRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }, 200);
+    if (replyTo) {
+      setIsOpen(true)
     }
-  };
+  }, [replyTo])
 
   const handleFileUpload = async () => {
     if (!selectedFile) return
 
-    setIsUploading(true)
-    setUploadProgress(0)
-
     try {
-      // Step 1: Dapatkan URL upload singkat
       const uploadUrl = await generateUploadUrl()
 
-      // Step 2: Upload dengan progress nyata pakai XMLHttpRequest
       const storageId = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
-
-        xhr.upload.addEventListener("progress", (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = (e.loaded / e.total) * 100
-            setUploadProgress(percentComplete)
-          }
-        })
-
         xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const response = JSON.parse(xhr.responseText)
-            resolve(response.storageId)
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`))
-          }
+          const res = JSON.parse(xhr.responseText)
+          resolve(res.storageId)
         }
-
-        xhr.onerror = () => reject(new Error("Upload failed due to a network error"))
+        xhr.onerror = () => reject(new Error("Upload failed"))
         xhr.open("POST", uploadUrl)
-        xhr.setRequestHeader("Content-Type", selectedFile.type)
         xhr.send(selectedFile)
       })
 
-      // Step 3: Simpan file ID ke DB
       await sendFileMessage({
         roomId,
         userId,
@@ -146,173 +85,159 @@ export function ReplyInput({
         fileName: selectedFile.name,
         fileType: selectedFile.type,
         fileSize: selectedFile.size,
-        content: message.trim() || undefined,
+        content: message.trim() || "",
         replyToId: replyTo?.messageId,
       })
+    } catch (error) {
+      throw error
+    }
+  }
 
-      console.log(`File uploaded successfully:`, {
-        fileName: selectedFile.name,
-        fileType: selectedFile.type,
-        fileSize: selectedFile.size,
-        storageId,
-        timestamp: new Date().toISOString(),
-      })
-
-      setSelectedFile(null)
-      onMessageChange("")
-      if (replyTo) onCancelReply()
-      if (fileInputRef.current) fileInputRef.current.value = ""
-
+  const handleSendMessage = async () => {
+    if (!message.trim() && !selectedFile) {
       toast({
-        title: "File Uploaded!",
-        description: `${selectedFile.name} has been shared successfully.`,
+        title: "Pesan kosong",
+        description: "Tuliskan sesuatu atau lampirkan file sebelum mengirim.",
       })
+      return
+    }
+
+    setIsSending(true)
+    try {
+      if (selectedFile) {
+        await handleFileUpload()
+      } else {
+        await sendMessage({
+          roomId,
+          userId,
+          content: message.trim(),
+          replyToId: replyTo?.messageId,
+        })
+      }
+
+      setMessage("")
+      setSelectedFile(null)
+      onCancelReply()
+      setIsOpen(false)
+      onMessageSent() // Panggil onMessageSent setelah pesan berhasil dikirim
     } catch (error) {
       toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Failed to upload file",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Gagal mengirim pesan, coba lagi.",
         variant: "destructive",
       })
     } finally {
-      setIsUploading(false)
-      setUploadProgress(0)
-      setHasSelectedFile(true);
+      setIsSending(false)
     }
   }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (selectedFile) {
-      await handleFileUpload()
-    } else if (message.trim()) {
-      onSendMessage(e)
-    }
-  }
-
-  const handleCancelFile = () => {
-    setSelectedFile(null)
-    setHasSelectedFile(false);
-    if (fileInputRef.current) fileInputRef.current.value = ""
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
 
   return (
-    <div className="space-y-2">
-      {replyTo && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 px-3 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Reply className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">Replying to {replyTo.username} : {replyTo.content}</span>
-            </div>
-            <Button size="sm" variant="ghost" onClick={onCancelReply}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {selectedFile && (
-        <div className="bg-gray-50 border rounded-lg p-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1 max-w-[90%]">
-            {getFileIcon(selectedFile.type)}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{selectedFile.name}</p>
-              <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isUploading && (
-              <div className="relative w-8 h-8">
-                <svg className="w-8 h-8 text-blue-500 animate-spin" viewBox="0 0 50 50">
-                  <circle
-                    className="text-gray-200"
-                    cx="25"
-                    cy="25"
-                    r="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="5"
-                  ></circle>
-                  <circle
-                    className="text-blue-600"
-                    cx="25"
-                    cy="25"
-                    r="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="5"
-                    strokeDasharray="100"
-                    strokeDashoffset="75"
-                  ></circle>
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-gray-700">
-                  {Math.round(uploadProgress)}%
-                </span>
-              </div>
-            )}
-
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleCancelFile}
-              disabled={isUploading}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="relative">
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1">
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
-                disabled={isUploading || isSending}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-8 w-8 p-0 hover:bg-gray-100 sm:w-4 sm:h-4"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading || isSending}
-              >
-                <Paperclip className="w-4 h-4 text-gray-500" />
-              </Button>
-            </div>
-            <Textarea
-              value={message}
-              ref={textareaRef}
-              onTouchStart={handleTouchStart}
-              onChange={(e) => onMessageChange(e.target.value)}
-              placeholder={selectedFile ? "Add a caption (optional)..." : replyTo ? "Reply to message..." : "Type your message..."}
-              className="pl-12 pr-3 rounded-2xl resize-none max-h-48 overflow-y-auto"
-              disabled={isSending || isUploading}
-            />
-          </div>
+    <>
+      {!isOpen && (
+        <div className="fixed bottom-2 left-1/2 -translate-x-1/2 bg-white/50 backdrop-blur flex items-center justify-center p-2 rounded-full shadow-lg">
           <Button
-            type="submit"
-            disabled={isSending || isUploading || (!message.trim() && !selectedFile)}
-            className="rounded-full"
+            onClick={() => setIsOpen(true)}
+            className="text-lg font-bold rounded-full shadow-lg px-10 py-6"
           >
-            {selectedFile ? <Paperclip className="w-4 h-4" /> : <Reply className="w-4 h-4" />}
+            Kirim...
           </Button>
         </div>
-      </form>
-    </div>
+      )}
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ type: "spring", stiffness: replyTo ? 390 : 350, damping: replyTo ? 24 : 28 }}
+            className="fixed inset-0 flex items-center justify-center p-4 z-50 bg-black/30 backdrop-blur-sm"
+          >
+            <motion.form
+              ref={modalRef}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", stiffness: replyTo ? 390 : 350, damping: replyTo ? 24 : 28 }}
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSendMessage()
+              }}
+              className="bg-white rounded-2xl w-full max-w-md p-4 shadow-xl mt-[-5vh]"
+            >
+              {replyTo && (
+                <div className="p-2 border rounded-xl mb-2 text-sm relative bg-blue-50">
+                  Membalas @{replyTo.username}: "{replyTo.content}"
+                  <button
+                    type="button"
+                    onClick={onCancelReply}
+                    className="absolute top-1 right-1 p-1"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              {selectedFile && (
+                <div className="p-2 border rounded-xl mb-2 text-sm flex items-center gap-2 bg-muted">
+                  <Image size={16} />
+                  <span className="truncate">{selectedFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFile(null)}
+                    className="ml-auto p-1"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              <AutosizeTextarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Tulis pesanmu di sini..."
+                className="min-h-[100px]"
+                maxHeight={500}
+                autoFocus
+              />
+
+              <div className="mt-4 flex justify-between items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsOpen(false)
+                    setSelectedFile(null)
+                    onCancelReply()
+                  }}
+                >
+                  Batal
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer flex items-center gap-1">
+                    <Paperclip size={20} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          setSelectedFile(file)
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  <Button type="submit" disabled={isSending}>
+                    {isSending ? "Mengirim..." : "Kirim"}
+                  </Button>
+                </div>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }

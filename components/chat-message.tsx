@@ -37,6 +37,8 @@ interface ChatMessageProps {
     username: string
   }
   onReply: (messageId: Id<"messages">, content: string, username: string) => void
+  isSameSenderAsPrevious?: boolean
+  isSameSenderAsNext?: boolean
 }
 
 export function ChatMessage({
@@ -58,55 +60,72 @@ export function ChatMessage({
   fileAttachment,
   replyTo,
   onReply,
+  isSameSenderAsPrevious = false,
+  isSameSenderAsNext = false,
 }: ChatMessageProps) {
-  // Get username color based on role
   const getUsernameColor = (role: string, isOwn: boolean) => {
     if (isOwn) {
       switch (role) {
         case "owner":
-          return "text-yellow-200" // Light gold for owner
+          return "text-yellow-200"
         case "admin":
-          return "text-purple-200" // Light purple for admin
+          return "text-purple-200"
         default:
-          return "text-blue-100" // Light blue for member
+          return "text-blue-100"
       }
     } else {
       switch (role) {
         case "owner":
-          return "text-yellow-600" // Gold for owner
+          return "text-yellow-600"
         case "admin":
-          return "text-purple-600" // Purple for admin
+          return "text-purple-600"
         default:
-          return "text-gray-600" // Gray for member
+          return "text-gray-600"
       }
     }
   }
 
-  const [fileModalData, setFileModalData] = useState<{
-    url: string
-    type: string
-    name: string
-  } | null>(null)
+  // Tentukan apakah avatar ditampilkan
+  const showAvatar = !isSameSenderAsPrevious
 
-  const handleOpenPreview = (url: string, type: string, name: string) => {
-    setFileModalData({ url, type, name })
-  }
+  // Tentukan border-radius berdasarkan posisi pesan
+  const messageBorderRadius = cn(
+    "rounded-2xl lg:rounded-3xl",
+    isOwnMessage
+      ? {
+          // Pesan sendiri
+          "rounded-tr-[8px]": 
+            (!isSameSenderAsPrevious && isSameSenderAsNext) ||  // Paling awal
+            (isSameSenderAsPrevious && !isSameSenderAsNext),    // Paling akhir
+          "rounded-tr-[8px] rounded-br-[8px]":
+            isSameSenderAsPrevious && isSameSenderAsNext,       // Tengah
+        }
+      : {
+          // Pesan lawan
+          "rounded-tl-[8px]":
+            (!isSameSenderAsPrevious && isSameSenderAsNext) ||  // Paling awal
+            (isSameSenderAsPrevious && !isSameSenderAsNext),    // Paling akhir
+          "rounded-tl-[8px] rounded-bl-[8px]":
+            isSameSenderAsPrevious && isSameSenderAsNext,       // Tengah
+        }
+  )
 
-  // Don't render if message is deleted for everyone
   if (isDeleted && deletedFor === "everyone") {
     return (
-      <div className={cn("flex gap-3 my-2 opacity-50", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
-        <div className="flex-shrink-0">
-          <Avatar className="w-10 h-10">
-            <AvatarImage src={userImageUrl || "/placeholder.svg"} />
-            <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
+      <div className={cn("flex gap-3 mb-2 px-2 opacity-80", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
+        <div className="flex-shrink-0 w-10 h-10" style={{ visibility: showAvatar ? "visible" : "hidden" }}>
+          {showAvatar && (
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={userImageUrl || "/placeholder.svg"} className="message-image" />
+              <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+          )}
         </div>
         <div className={cn("flex flex-col max-w-[70%]", isOwnMessage ? "items-end" : "items-start")}>
           <div
             className={cn(
-              "rounded-2xl px-4 py-2 max-w-full break-words bg-gray-200 text-gray-500 italic relative",
-              isOwnMessage ? "rounded-br-md" : "rounded-bl-md",
+              "px-4 py-3 max-w-full break-words bg-gray-200 text-gray-500 italic relative",
+              messageBorderRadius
             )}
           >
             <p className="text-sm">This message was deleted</p>
@@ -116,21 +135,22 @@ export function ChatMessage({
     )
   }
 
-  // Show deleted for me message
   if (isDeleted && deletedFor === "me") {
     return (
-      <div className={cn("flex gap-3 my-2 opacity-50", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
-        <div className="flex-shrink-0">
-          <Avatar className="w-10 h-10">
-            <AvatarImage src={userImageUrl || "/placeholder.svg"} />
-            <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
+      <div className={cn("flex gap-3 mb-2 px-2 opacity-80", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
+        <div className="flex-shrink-0 w-10 h-10" style={{ visibility: showAvatar ? "visible" : "hidden" }}>
+          {showAvatar && (
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={userImageUrl || "/placeholder.svg"} className="message-image" />
+              <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+          )}
         </div>
         <div className={cn("flex flex-col max-w-[70%]", isOwnMessage ? "items-end" : "items-start")}>
           <div
             className={cn(
-              "rounded-2xl px-4 py-2 max-w-full break-words bg-gray-100 text-gray-400 italic relative",
-              isOwnMessage ? "rounded-br-md" : "rounded-bl-md",
+              "px-4 py-3 max-w-full break-words bg-gray-100 text-gray-400 italic relative",
+              messageBorderRadius
             )}
           >
             <p className="text-sm">You deleted this message</p>
@@ -141,25 +161,32 @@ export function ChatMessage({
   }
 
   return (
-    <div className={cn("flex gap-3 mb-4 px-2", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
-      <div className="flex-shrink-0">
-        <ProfileHoverCard
-          userId={userId}
-          username={username}
-          name={username}
-          imageUrl={userImageUrl}
-          role={userRole}
-          roomId={roomId}
-          currentUserId={currentUserId}
-          currentUserRole={currentUserRole}
-          isCEO={isCEO}
-          canManage={canManage && !isOwnMessage}
-        >
-          <Avatar className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all">
-            <AvatarImage src={userImageUrl || "/placeholder.svg"} />
-            <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-        </ProfileHoverCard>
+    <div className={cn("flex gap-3 mb-2 px-2", isOwnMessage ? "flex-row-reverse" : "flex-row")}>
+      <div className="flex-shrink-0 w-10 h-10" style={{ visibility: showAvatar ? "visible" : "hidden" }}>
+        {showAvatar && (
+          <ProfileHoverCard
+            userId={userId}
+            username={username}
+            name={username}
+            imageUrl={userImageUrl}
+            role={userRole}
+            roomId={roomId}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+            isCEO={isCEO}
+            canManage={canManage && !isOwnMessage}
+          >
+            <Avatar
+              className={cn(
+                "w-10 h-10 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all",
+                isOwnMessage ? "self-start" : ""
+              )}
+            >
+              <AvatarImage src={userImageUrl || "/placeholder.svg"} className="message-image" />
+              <AvatarFallback>{username?.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+          </ProfileHoverCard>
+        )}
       </div>
 
       <div className={cn("flex flex-col max-w-[70%]", isOwnMessage ? "items-end" : "items-start")}>
@@ -192,13 +219,13 @@ export function ChatMessage({
 
             <div
               className={cn(
-                "rounded-2xl px-4 py-3 pb-1 pt-2 pr-3 max-w-full break-words transition-all hover:shadow-md relative",
+                "px-4 py-3 pb-1 pt-2 pr-3 max-w-full break-words transition-all hover:shadow-md relative",
                 isOwnMessage
-                  ? "bg-blue-500 text-white rounded-br-md hover:bg-blue-600"
-                  : "bg-gray-100 text-gray-900 rounded-bl-md hover:bg-gray-200",
+                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  : "bg-gray-300 text-gray-900 hover:bg-gray-300",
+                messageBorderRadius
               )}
             >
-              {/* Username inside message bubble with role color */}
               <div className={cn("flex mb-2", isOwnMessage ? "justify-end" : "justify-start")}>
                 <ProfileHoverCard
                   userId={userId}
@@ -223,7 +250,6 @@ export function ChatMessage({
                 </ProfileHoverCard>
               </div>
 
-              {/* File attachment preview */}
               {fileAttachment && (
                 <div className="mb-2 w-full max-w-full">
                   <FilePreview
@@ -235,13 +261,14 @@ export function ChatMessage({
                 </div>
               )}
 
-              {/* Message content */}
-              <p className={cn("flex text-sm leading-relaxed", isOwnMessage ? "justify-end" : "justify-start")}>{content}</p>
+              <p className={cn("flex text-sm leading-relaxed", isOwnMessage ? "justify-end" : "justify-start")}>
+                {content}
+              </p>
 
-              {/* Timestamp in bottom right corner */}
-              <div className={cn("text-[0.65rem] mt-2 flex justify-end", isOwnMessage ? "text-blue-100" : "text-gray-500")}>
+              <div
+                className={cn("text-[0.65rem] mt-2 flex justify-end", isOwnMessage ? "text-blue-100" : "text-gray-500")}
+              >
                 <span>{new Date(timestamp).toLocaleTimeString()}</span>
-                {/* Message status indicators for own messages */}
                 {isOwnMessage && <span className="ml-1">✓✓</span>}
               </div>
             </div>

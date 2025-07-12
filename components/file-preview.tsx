@@ -82,7 +82,7 @@ export function FilePreview({ fileId, fileName, fileType, fileSize }: FilePrevie
         onClick={() => setOpen(true)}
       >
         {fileType.startsWith("image/") && (
-          <div>
+          <div className="message-container">
             <Image
               src={fileUrl}
               alt={fileName}
@@ -107,7 +107,7 @@ export function FilePreview({ fileId, fileName, fileType, fileSize }: FilePrevie
           </div>
         )}
         {fileType.startsWith("video/") && (
-          <div>
+          <div className="message-container">
             <video
               src={fileUrl}
               controls

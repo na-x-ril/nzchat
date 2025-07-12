@@ -26,7 +26,7 @@ export default async function RootLayout({
       signInFallbackRedirectUrl="/home"
     >
       <html lang="en">
-        <body className={`${inter.className} h-[100dvh] overflow-hidden`}>
+        <body className={`${inter.className} h-svh overflow-hidden`}>
           <ConvexProvider>
             {children}
             <Toaster />
