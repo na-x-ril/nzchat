@@ -230,8 +230,8 @@ export default function RoomPage({ params }: RoomPageProps) {
         </div>
       </header>
 
-      <div className="flex-1 mt-16 overflow-y-auto" style={{ paddingBottom: `${inputHeight + 20}px` }}>
-        <div className="mx-auto space-y-2 pt-2 px-4 message-container">
+      <div className="flex-1 mt-16 overflow-y-auto">
+        <div className="mx-auto space-y-2 pt-2 px-4 pb-16 message-container">
           {messageWithSequenceInfo.length > 0 ? (
             messageWithSequenceInfo.map((msg) => (
               <ChatMessage
