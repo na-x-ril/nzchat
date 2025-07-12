@@ -42,16 +42,12 @@ export default function RoomPage({ params }: RoomPageProps) {
   )
 
   const joinRoom = useMutation(api.rooms.joinRoom)
-  const sendMessage = useMutation(api.messages.sendMessage)
   const { toast } = useToast()
 
-  const [message, setMessage] = useState("")
   const [isJoining, setIsJoining] = useState(false)
-  const [isSending, setIsSending] = useState(false)
   const [mediaLoaded, setMediaLoaded] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false)
-  const [hasSelectedFile, setHasSelectedFile] = useState(false)
   const inputContainerRef = useRef<HTMLDivElement>(null)
   const [inputHeight, setInputHeight] = useState(0)
 
