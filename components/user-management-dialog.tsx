@@ -195,7 +195,7 @@ export function UserManagementDialog({
         </DialogHeader>
 
         <ScrollArea className="max-h-96">
-          <div className="space-y-4">
+          <div className="space-y-2">
             {roomMembers?.map((member) => (
               <div key={member._id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">

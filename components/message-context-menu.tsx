@@ -54,7 +54,7 @@ export function MessageContextMenu({
   const canDeleteForMe = true // Everyone can delete messages for themselves
 
   const handleCopyMessage = () => {
-    navigator.clipboard.writeText(messageContent)
+    navigator?.clipboard?.writeText(messageContent)
     toast({
       title: "Copied",
       description: "Message copied to clipboard",

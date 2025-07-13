@@ -107,7 +107,7 @@ export function ConnectionSpeedDialog({ isOpen, onClose, userId }: ConnectionSpe
             <Label className="text-base font-medium">Select your typical internet speed:</Label>
             <RadioGroup value={selectedSpeed.toString()} onValueChange={(value) => setSelectedSpeed(Number(value))}>
               {speedOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-[#471396] cursor-pointer">
                   <RadioGroupItem value={option.value.toString()} id={`speed-${option.value}`} />
                   <div className="flex-1">
                     <Label htmlFor={`speed-${option.value}`} className="cursor-pointer">
@@ -132,10 +132,10 @@ export function ConnectionSpeedDialog({ isOpen, onClose, userId }: ConnectionSpe
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={handleSkip} disabled={isLoading}>
+            <Button variant="outline" onClick={handleSkip} disabled={isLoading} className="bg-destructive">
               Skip for Now
             </Button>
-            <Button onClick={handleSave} disabled={isLoading}>
+            <Button onClick={handleSave} disabled={isLoading} className="dark:bg-[#471396] lg:dark:bg-[#471386] dark:text-white">
               {isLoading ? "Saving..." : "Save Settings"}
             </Button>
           </div>

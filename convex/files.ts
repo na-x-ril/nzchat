@@ -18,11 +18,11 @@ export const sendFileMessage = mutation({
     fileName: v.string(),
     fileType: v.string(),
     fileSize: v.number(),
-    content: v.optional(v.string()), // Optional caption
+    content: v.optional(v.string()),
+    useMarkdown: v.optional(v.boolean()), // Added useMarkdown argument
     replyToId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
-    // Check if user can send messages (member, admin, owner, or CEO)
     const user = await ctx.db.get(args.userId)
     const isCEO = checkCEO(user?.email)
 
@@ -37,7 +37,6 @@ export const sendFileMessage = mutation({
       }
     }
 
-    // Check if user is muted
     const muted = await ctx.db
       .query("mutedUsers")
       .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.userId))
@@ -47,7 +46,6 @@ export const sendFileMessage = mutation({
       throw new Error("You are muted in this room")
     }
 
-    // Get reply-to message if specified
     let replyTo: { messageId: Id<"messages">; content: string; username: string } | undefined = undefined
     if (args.replyToId) {
       const replyMessage = await ctx.db.get(args.replyToId)
@@ -61,11 +59,8 @@ export const sendFileMessage = mutation({
       }
     }
 
-    // Determine message content based on whether caption is provided
     let messageContent: string = ""
-
     if (args.content && args.content.trim()) {
-      // If caption is provided, use only the caption
       messageContent = args.content.trim()
     }
 
@@ -73,6 +68,7 @@ export const sendFileMessage = mutation({
       roomId: args.roomId,
       userId: args.userId,
       content: messageContent,
+      useMarkdown: args.useMarkdown, // Store useMarkdown
       fileAttachment: {
         fileId: args.fileId,
         fileName: args.fileName,
@@ -83,10 +79,8 @@ export const sendFileMessage = mutation({
       createdAt: Date.now(),
     })
 
-    // Get the file URL for logging
     const fileUrl = await ctx.storage.getUrl(args.fileId)
 
-    // Log the file upload
     console.log(`File uploaded and shared:`, {
       messageId: messageId,
       userId: args.userId,
@@ -97,10 +91,10 @@ export const sendFileMessage = mutation({
       fileSize: args.fileSize,
       fileUrl: fileUrl,
       hasCaption: !!args.content?.trim(),
+      useMarkdown: args.useMarkdown, // Log useMarkdown
       timestamp: new Date().toISOString(),
     })
 
-    // Add to audit logs for tracking
     await ctx.db.insert("auditLogs", {
       roomId: args.roomId,
       actionBy: args.userId,
@@ -113,6 +107,7 @@ export const sendFileMessage = mutation({
         fileSize: args.fileSize,
         fileUrl: fileUrl,
         hasCaption: !!args.content?.trim(),
+        useMarkdown: args.useMarkdown, // Include in audit log metadata
       },
       createdAt: Date.now(),
     })
@@ -124,8 +119,6 @@ export const sendFileMessage = mutation({
 export const getFileUrl = query({
   args: { fileId: v.id("_storage") },
   handler: async (ctx, args) => {
-    // // Defensive: Remove any stray quotes
-    // const cleanId = typeof args.fileId === "string" ? args.fileId.replace(/['"]/g, "") : args.fileId
     return await ctx.storage.getUrl(args.fileId)
   },
 })

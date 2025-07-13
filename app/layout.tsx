@@ -5,6 +5,7 @@ import "./globals.css"
 import { ClerkProvider } from "@clerk/nextjs"
 import { ConvexProvider } from "@/components/convex-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,11 +26,13 @@ export default async function RootLayout({
       signUpUrl="/sign-up"
       signInFallbackRedirectUrl="/home"
     >
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body className={`${inter.className} h-svh overflow-hidden`}>
           <ConvexProvider>
-            {children}
-            <Toaster />
+            <ThemeProvider>
+              {children}
+              <Toaster />
+            </ThemeProvider>
           </ConvexProvider>
         </body>
       </html>

@@ -1,44 +1,48 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ProfileHoverCard } from "@/components/profile-hover-card"
-import { MessageContextMenu } from "@/components/message-context-menu"
-import { FilePreview } from "@/components/file-preview"
-import { Reply } from "lucide-react"
-import { cn } from "@/lib/utils"
-import type { Id } from "@/convex/_generated/dataModel"
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileHoverCard } from "@/components/profile-hover-card";
+import { MessageContextMenu } from "@/components/message-context-menu";
+import { FilePreview } from "@/components/file-preview";
+import { Reply } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Id } from "@/convex/_generated/dataModel";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 interface ChatMessageProps {
-  messageId: Id<"messages">
-  userId: Id<"users">
-  username: string
-  userImageUrl: string
-  content: string
-  timestamp: number
-  isOwnMessage: boolean
-  userRole?: string
-  roomId: Id<"rooms">
-  currentUserId: Id<"users">
-  currentUserRole: string
-  isCEO: boolean
-  canManage: boolean
-  isDeleted?: boolean
-  deletedFor?: "me" | "everyone"
+  messageId: Id<"messages">;
+  userId: Id<"users">;
+  username: string;
+  userImageUrl: string;
+  content: string;
+  timestamp: number;
+  isOwnMessage: boolean;
+  userRole?: string;
+  roomId: Id<"rooms">;
+  currentUserId: Id<"users">;
+  currentUserRole: string;
+  isCEO: boolean;
+  canManage: boolean;
+  isDeleted?: boolean;
+  deletedFor?: "me" | "everyone";
   fileAttachment?: {
-    fileId: Id<"_storage">
-    fileName: string
-    fileType: string
-    fileSize: number
-  }
+    fileId: Id<"_storage">;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+  };
   replyTo?: {
-    messageId: Id<"messages">
-    content: string
-    username: string
-  }
-  onReply: (messageId: Id<"messages">, content: string, username: string) => void
-  isSameSenderAsPrevious?: boolean
-  isSameSenderAsNext?: boolean
+    messageId: Id<"messages">;
+    content: string;
+    username: string;
+  };
+  onReply: (messageId: Id<"messages">, content: string, username: string) => void;
+  isSameSenderAsPrevious?: boolean;
+  isSameSenderAsNext?: boolean;
+  useMarkdown?: boolean;
 }
 
 export function ChatMessage({
@@ -62,53 +66,50 @@ export function ChatMessage({
   onReply,
   isSameSenderAsPrevious = false,
   isSameSenderAsNext = false,
+  useMarkdown = false,
 }: ChatMessageProps) {
   const getUsernameColor = (role: string, isOwn: boolean) => {
     if (isOwn) {
       switch (role) {
         case "owner":
-          return "text-yellow-200"
+          return "text-yellow-200";
         case "admin":
-          return "text-purple-200"
+          return "text-purple-200";
         default:
-          return "text-blue-100"
+          return "text-blue-100";
       }
     } else {
       switch (role) {
         case "owner":
-          return "text-yellow-600"
+          return "text-yellow-600";
         case "admin":
-          return "text-purple-600"
+          return "text-purple-600";
         default:
-          return "text-gray-600"
+          return "text-gray-600";
       }
     }
-  }
+  };
 
-  // Tentukan apakah avatar ditampilkan
-  const showAvatar = !isSameSenderAsPrevious
+  const showAvatar = !isSameSenderAsPrevious;
 
-  // Tentukan border-radius berdasarkan posisi pesan
   const messageBorderRadius = cn(
     "rounded-2xl lg:rounded-3xl",
     isOwnMessage
       ? {
-          // Pesan sendiri
-          "rounded-tr-[8px]": 
-            (!isSameSenderAsPrevious && isSameSenderAsNext) ||  // Paling awal
-            (isSameSenderAsPrevious && !isSameSenderAsNext),    // Paling akhir
+          "rounded-tr-[8px]":
+            (!isSameSenderAsPrevious && isSameSenderAsNext) ||
+            (isSameSenderAsPrevious && !isSameSenderAsNext),
           "rounded-tr-[8px] rounded-br-[8px]":
-            isSameSenderAsPrevious && isSameSenderAsNext,       // Tengah
+            isSameSenderAsPrevious && isSameSenderAsNext,
         }
       : {
-          // Pesan lawan
           "rounded-tl-[8px]":
-            (!isSameSenderAsPrevious && isSameSenderAsNext) ||  // Paling awal
-            (isSameSenderAsPrevious && !isSameSenderAsNext),    // Paling akhir
+            (!isSameSenderAsPrevious && isSameSenderAsNext) ||
+            (isSameSenderAsPrevious && !isSameSenderAsNext),
           "rounded-tl-[8px] rounded-bl-[8px]":
-            isSameSenderAsPrevious && isSameSenderAsNext,       // Tengah
+            isSameSenderAsPrevious && isSameSenderAsNext,
         }
-  )
+  );
 
   if (isDeleted && deletedFor === "everyone") {
     return (
@@ -132,7 +133,7 @@ export function ChatMessage({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (isDeleted && deletedFor === "me") {
@@ -157,7 +158,7 @@ export function ChatMessage({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -206,14 +207,21 @@ export function ChatMessage({
               <div
                 className={cn(
                   "mb-2 p-2 rounded-lg border-l-4 bg-gray-50 text-xs",
-                  isOwnMessage ? "border-blue-300" : "border-gray-300",
+                  isOwnMessage ? "border-blue-300" : "border-gray-300"
                 )}
               >
                 <div className="flex items-center gap-1 text-gray-600 mb-1">
                   <Reply className="w-3 h-3" />
                   <span className="font-medium">{replyTo.username}</span>
                 </div>
-                <p className="text-gray-700 truncate">{replyTo.content}</p>
+                <ReactMarkdown
+                  remarkPlugins={[remarkBreaks]}
+                  components={{
+                    p: ({ node, ...props }) => <p className="truncate" {...props} />,
+                  }}
+                >
+                  {replyTo.content}
+                </ReactMarkdown>
               </div>
             )}
 
@@ -221,7 +229,7 @@ export function ChatMessage({
               className={cn(
                 "px-4 py-3 pb-1 pt-2 pr-3 max-w-full break-words transition-all hover:shadow-md relative",
                 isOwnMessage
-                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                  ? "bg-purple-800 text-white hover:bg-blue-600"
                   : "bg-gray-300 text-gray-900 hover:bg-gray-300",
                 messageBorderRadius
               )}
@@ -242,7 +250,7 @@ export function ChatMessage({
                   <span
                     className={cn(
                       "text-xs font-semibold cursor-pointer hover:underline",
-                      getUsernameColor(userRole, isOwnMessage),
+                      getUsernameColor(userRole, isOwnMessage)
                     )}
                   >
                     {username}
@@ -261,9 +269,18 @@ export function ChatMessage({
                 </div>
               )}
 
-              <p className={cn("flex text-sm leading-relaxed", isOwnMessage ? "justify-end" : "justify-start")}>
-                {content}
-              </p>
+              {useMarkdown ? (
+                <MarkdownRenderer content={content}/>
+              ) : (
+                <p
+                  className={cn(
+                    "mb-2",
+                    content.includes("\n") ? "whitespace-pre-wrap" : "whitespace-nowrap"
+                  )}
+                >
+                  {content}
+                </p>
+              )}
 
               <div
                 className={cn("text-[0.65rem] mt-2 flex justify-end", isOwnMessage ? "text-blue-100" : "text-gray-500")}
@@ -276,5 +293,5 @@ export function ChatMessage({
         </MessageContextMenu>
       </div>
     </div>
-  )
+  );
 }

@@ -8,10 +8,10 @@ export const sendMessage = mutation({
     roomId: v.id("rooms"),
     userId: v.id("users"),
     content: v.string(),
+    useMarkdown: v.optional(v.boolean()), // New argument
     replyToId: v.optional(v.id("messages")),
   },
   handler: async (ctx, args) => {
-    // Check if user can send messages (member, admin, owner, or CEO)
     const user = await ctx.db.get(args.userId)
     const isCEO = checkCEO(user?.email)
 
@@ -26,7 +26,6 @@ export const sendMessage = mutation({
       }
     }
 
-    // Check if user is muted
     const muted = await ctx.db
       .query("mutedUsers")
       .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.userId))
@@ -36,7 +35,6 @@ export const sendMessage = mutation({
       throw new Error("You are muted in this room")
     }
 
-    // Get reply-to message if specified
     let replyTo: { messageId: Id<"messages">; content: string; username: string } | undefined = undefined
     if (args.replyToId) {
       const replyMessage = await ctx.db.get(args.replyToId)
@@ -54,6 +52,73 @@ export const sendMessage = mutation({
       roomId: args.roomId,
       userId: args.userId,
       content: args.content,
+      useMarkdown: args.useMarkdown, // Store useMarkdown
+      replyTo: replyTo || undefined,
+      createdAt: Date.now(),
+    })
+  },
+})
+
+export const sendFileMessage = mutation({
+  args: {
+    roomId: v.id("rooms"),
+    userId: v.id("users"),
+    fileId: v.id("_storage"),
+    fileName: v.string(),
+    fileType: v.string(),
+    fileSize: v.number(),
+    content: v.string(),
+    useMarkdown: v.optional(v.boolean()), // New argument
+    replyToId: v.optional(v.id("messages")),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId)
+    const isCEO = checkCEO(user?.email)
+
+    if (!isCEO) {
+      const membership = await ctx.db
+        .query("roomMembers")
+        .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.userId))
+        .first()
+
+      if (!membership || membership.isBlocked) {
+        throw new Error("You must be a member to send messages")
+      }
+    }
+
+    const muted = await ctx.db
+      .query("mutedUsers")
+      .withIndex("by_room_user", (q) => q.eq("roomId", args.roomId).eq("userId", args.userId))
+      .first()
+
+    if (muted && (!muted.expiresAt || muted.expiresAt > Date.now())) {
+      throw new Error("You are muted in this room")
+    }
+
+    let replyTo: { messageId: Id<"messages">; content: string; username: string } | undefined = undefined
+    if (args.replyToId) {
+      const replyMessage = await ctx.db.get(args.replyToId)
+      if (replyMessage) {
+        const replyUser = await ctx.db.get(replyMessage.userId)
+        replyTo = {
+          messageId: replyMessage._id,
+          content: replyMessage.content,
+          username: replyUser?.username || "Unknown",
+        }
+      }
+    }
+
+    return await ctx.db.insert("messages", {
+      roomId: args.roomId,
+      userId: args.userId,
+      content: args.content,
+      useMarkdown: args.useMarkdown, // Store useMarkdown
+      fileAttachment: {
+        fileId: args.fileId,
+        fileName: args.fileName,
+        fileType: args.fileType,
+        fileSize: args.fileSize,
+      },
       replyTo: replyTo || undefined,
       createdAt: Date.now(),
     })
@@ -76,7 +141,6 @@ export const deleteMessage = mutation({
     const isCEO = checkCEO(user?.email)
     const isMessageOwner = message.userId === args.deletedBy
 
-    // Get user role in room
     const membership = await ctx.db
       .query("roomMembers")
       .withIndex("by_room_user", (q) => q.eq("roomId", message.roomId).eq("userId", args.deletedBy))
@@ -89,7 +153,6 @@ export const deleteMessage = mutation({
     }
 
     if (args.deleteType === "for_everyone") {
-      // Delete for everyone - mark message as deleted
       await ctx.db.patch(args.messageId, {
         isDeleted: true,
         deletedBy: args.deletedBy,
@@ -97,7 +160,6 @@ export const deleteMessage = mutation({
         deletedFor: "everyone",
       })
     } else {
-      // Delete for me - add to user's deleted messages
       const existingDeletion = await ctx.db
         .query("deletedMessages")
         .withIndex("by_message_user", (q) => q.eq("messageId", args.messageId).eq("userId", args.deletedBy))
@@ -128,7 +190,6 @@ export const getMessages = query({
       .order("desc")
       .take(100)
 
-    // Get user's deleted messages if userId provided
     let userDeletedMessages: string[] = []
     if (args.userId) {
       const deletedForUser = await ctx.db
@@ -142,11 +203,9 @@ export const getMessages = query({
       messages.map(async (message) => {
         const user = await ctx.db.get(message.userId)
 
-        // Check if message is deleted for this user
         const isDeletedForMe = args.userId ? userDeletedMessages.includes(message._id) : false
         const isDeletedForEveryone = message.isDeleted || false
 
-        // Determine deletedFor value with proper typing
         let deletedFor: "me" | "everyone" | undefined = undefined
         if (isDeletedForEveryone) {
           deletedFor = "everyone"
@@ -160,6 +219,7 @@ export const getMessages = query({
           userImageUrl: user?.imageUrl || "",
           isDeleted: isDeletedForMe || isDeletedForEveryone,
           deletedFor,
+          useMarkdown: message.useMarkdown, // Include useMarkdown
         }
       }),
     )

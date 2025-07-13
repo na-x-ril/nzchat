@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { AccentModal } from "@/components/accent-modal";
 import {
   Dialog,
   DialogContent,
@@ -113,7 +114,7 @@ export default function HomePage() {
 
   if (!isLoaded || isCreatingUser) {
     return (
-      <div className="h-[100dvh] bg-gray-50 flex items-center justify-center overflow-hidden fixed inset-0">
+      <div className="h-svh bg-gray-50 dark:bg-[#090040] lg:dark:bg-[#090030] flex items-center justify-center overflow-hidden fixed inset-0">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Loading...</h2>
         </div>
@@ -128,7 +129,7 @@ export default function HomePage() {
 
   if (!currentUser) {
     return (
-      <div className="h-[100dvh] bg-gray-50 flex items-center justify-center overflow-hidden fixed inset-0">
+      <div className="h-svh bg-gray-50 dark:bg-[#090040] lg:dark:bg-[#090030] flex items-center justify-center overflow-hidden fixed inset-0 transition-color">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
           <p className="text-gray-600">Redirecting to complete your profile setup...</p>
@@ -138,18 +139,18 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b fixed h-16 top-0 left-0 right-0 z-50">
+    <div className="h-svh bg-gray-50 dark:bg-[#090040] lg:dark:bg-[#090030]">
+      <header className="bg-white dark:bg-[#471396] lg:dark:bg-[#471386] shadow-sm border-b fixed h-16 top-0 left-0 right-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <h1 className="text-xl sm:text-xl font-bold">Chat Rooms</h1>
-              <Badge variant="outline" className="text-xs">
+              <h1 className="text-xl text-black dark:text-white sm:text-xl font-bold">Chat Rooms</h1>
+              <Badge variant="default" className="text-xs text-gray-100">
                 {checkCEO(currentUser?.email) ? "CEO" : "User"}
               </Badge>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <span className="text-xs sm:text-sm text-gray-600 hidden sm:block">Welcome, {currentUser.username}</span>
+            <div className="flex items-center bg-gray-300 dark:bg-[#B13BFF] rounded-full gap-2 sm:space-x-2 pr-2">
+              <AccentModal />
               <UserButton />
             </div>
           </div>
@@ -159,15 +160,15 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-16 space-y-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Available Rooms</h2>
-            <p className="text-sm sm:text-base text-gray-600 hidden sm:block">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Available Rooms</h2>
+            <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100">
               Join a conversation or create your own room
             </p>
           </div>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="dark:bg-[#471396] lg:dark:bg-[#471386] dark:text-white">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Room
               </Button>
@@ -205,10 +206,10 @@ export default function HomePage() {
                   />
                 </div>
                 <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  <Button type="button" variant="outline" className="hover:bg-destructive" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={isCreating}>
+                  <Button type="submit" disabled={isCreating} className="dark:bg-[#471396] lg:dark:bg-[#471386] dark:text-white">
                     {isCreating ? "Creating..." : "Create Room"}
                   </Button>
                 </div>
@@ -219,14 +220,14 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rooms?.map((room) => (
-            <Card key={room._id} className="hover:shadow-lg transition-shadow">
+            <Card key={room._id} className="bg-white dark:bg-[#FFCC00] hover:shadow-lg transition-shadow rounded-xl">
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="max-w-[80%]">
-                    <CardTitle className="text-lg break-words line-clamp-2">{room.name}</CardTitle>
-                    <CardDescription className="mt-1 max-w-full text-sm break-words line-clamp-2">{room.description || "No description"}</CardDescription>
+                    <CardTitle className="text-xl font-bold text-gray-900 dark:text-[#090040] break-words line-clamp-2">{room.name}</CardTitle>
+                    <CardDescription className="mt-1 max-w-full text-sm text-gray-700 dark:text-[#09004a] break-words line-clamp-2">{room.description || "No description"}</CardDescription>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="bg-white dark:bg-[#090040]">
                     <Users className="w-3 h-3 mr-1" />
                     {room.memberCount || 0}
                   </Badge>
@@ -234,9 +235,9 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-500">Created by {room.ownerUsername}</div>
+                  <div className="text-sm text-gray-500 dark:text-[#090070]">Created by {room.ownerUsername}</div>
                   <Link href={`/room/${room._id}`}>
-                    <Button size="sm">
+                    <Button size="sm" className="dark:bg-[#471396] dark:text-white">
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Enter Room
                     </Button>

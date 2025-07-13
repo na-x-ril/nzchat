@@ -12,9 +12,8 @@ const schema = defineSchema({
     bannedBy: v.optional(v.id("users")),
     bannedAt: v.optional(v.number()),
     banReason: v.optional(v.string()),
-    // Connection speed settings
-    connectionSpeed: v.optional(v.number()), // in Mbps
-    showSpeedDialog: v.optional(v.boolean()), // whether to show speed dialog
+    connectionSpeed: v.optional(v.number()),
+    showSpeedDialog: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_clerk_id", ["clerkId"])
@@ -52,6 +51,7 @@ const schema = defineSchema({
     roomId: v.id("rooms"),
     userId: v.id("users"),
     content: v.string(),
+    useMarkdown: v.optional(v.boolean()), // New field to indicate Markdown usage
     replyTo: v.optional(
       v.object({
         messageId: v.id("messages"),
@@ -59,14 +59,13 @@ const schema = defineSchema({
         username: v.string(),
       }),
     ),
-    // File attachment support
     fileAttachment: v.optional(
       v.object({
         fileId: v.id("_storage"),
         fileName: v.string(),
         fileType: v.string(),
         fileSize: v.number(),
-        thumbnailId: v.optional(v.id("_storage")), // for image/video thumbnails
+        thumbnailId: v.optional(v.id("_storage")),
       }),
     ),
     isDeleted: v.optional(v.boolean()),

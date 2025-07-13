@@ -191,7 +191,7 @@ export default function RoomPage({ params }: RoomPageProps) {
 
   if (!room || !currentUser) {
     return (
-      <div className="bg-gray-50 flex items-center justify-center overflow-hidden fixed inset-0">
+      <div className="bg-gray-50 dark:bg-[#090040] lg:dark:bg-[#090030] flex items-center justify-center overflow-hidden fixed inset-0">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Loading room...</h2>
         </div>
@@ -200,8 +200,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   }
 
   return (
-    <div className="h-[100dvh] bg-gray-50 flex flex-col">
-      <header className="bg-white w-full shadow-sm border-b fixed top-0 left-0 right-0 h-16 z-10">
+    <div className="h-[100dvh] bg-gray-50 dark:bg-[#090040] lg:dark:bg-[#090030] flex flex-col">
+      <header className="bg-white w-full dark:bg-[#471396] lg:dark:bg-[#471386] shadow-sm border-b fixed top-0 left-0 right-0 h-16 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4 max-w-full">
@@ -216,12 +216,12 @@ export default function RoomPage({ params }: RoomPageProps) {
               >
                 <h1
                   title={room.name}
-                  className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold flex items-center break-words line-clamp-2"
+                  className="text-lg md:text-xl lg:text-2xl font-bold flex items-center break-words line-clamp-2"
                 >
                   {room.name}
                   {isOwner && <Crown className="w-4 h-4 ml-2 text-yellow-500 shrink-0" />}
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-200">
                   {room.memberCount || 0} members
                 </p>
               </button>
@@ -256,6 +256,7 @@ export default function RoomPage({ params }: RoomPageProps) {
                 onReply={handleReply}
                 isSameSenderAsPrevious={msg.isSameSenderAsPrevious}
                 isSameSenderAsNext={msg.isSameSenderAsNext}
+                useMarkdown={msg.useMarkdown}
               />
             ))
           ) : (

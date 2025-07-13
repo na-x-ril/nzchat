@@ -12,7 +12,6 @@ const AutosizeTextareaWithRef = forwardRef<AutosizeTextAreaRef, AutosizeTextarea
     return (
       <AutosizeTextarea
         ref={ref}
-        maxHeight={200}
         className={cn("w-full text-sm placeholder:text-gray-400", className)}
         {...props}
       />
