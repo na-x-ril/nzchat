@@ -102,7 +102,7 @@ export function FilePreview({ fileId, fileName, fileType, fileSize }: FilePrevie
                 }
               }}
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-5 h-5 dark:text-gray-700" />
             </Button>
           </div>
         )}

@@ -143,14 +143,19 @@ export function ReplyInput({
           if (!open) onCancelReply();
         }}
       >
-        <DialogContent className="p-4 max-w-md dark:bg-[#090040] lg:dark:bg-[#090030] mt-[-10vh]">
+        <DialogContent className="p-4 max-w-50 dark:bg-[#090040] lg:dark:bg-[#090030] max-sm:mt-[-10vh] max-md:mt-[-10vh]">
           <DialogHeader>
             <DialogTitle>Kirim Balasan</DialogTitle>
           </DialogHeader>
 
           {replyTo && (
-            <div className="p-2 border rounded-xl text-sm dark:text-white relative bg-blue-50 dark:bg-blue-500/20">
-              Membalas @{replyTo.username}: "{replyTo.content}"
+            <div className="relative p-2 border rounded-xl text-sm dark:text-white bg-blue-50 dark:bg-blue-500/20">
+              <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">
+                Membalas @{replyTo.username}:
+              </div>
+              <div className="line-clamp-3 break-all max-w-full">
+                {replyTo.content}
+              </div>
               <button
                 type="button"
                 onClick={onCancelReply}
@@ -162,7 +167,7 @@ export function ReplyInput({
           )}
 
           {selectedFile && (
-            <div className="p-2 border rounded-xl text-sm flex items-center gap-2 bg-muted">
+            <div className="p-2 border rounded-xl text-sm flex items-center gap-2 bg-gray-400 dark:bg-white/20">
               <Image size={16} />
               <span className="truncate">{selectedFile.name}</span>
               <button
@@ -176,7 +181,7 @@ export function ReplyInput({
           )}
 
           <AutosizeTextarea
-            className="bg-transparent"
+            className="w-full resize-none break-words bg-transparent"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Tulis pesanmu di sini... (bisa dengan markdown)"

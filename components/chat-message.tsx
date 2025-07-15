@@ -91,22 +91,26 @@ export function ChatMessage({
   };
 
   const showAvatar = !isSameSenderAsPrevious;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const maxPreviewChars = 300;
+  const isLongContent = content.length > maxPreviewChars;
+  const previewContent = isLongContent ? content.slice(0, maxPreviewChars) + "…" : content;
 
   const messageBorderRadius = cn(
-    "rounded-2xl lg:rounded-3xl",
+    "rounded-2xl lg:rounded-2xl",
     isOwnMessage
       ? {
-          "rounded-tr-[8px]":
+          "!rounded-tr-[8px]":
             (!isSameSenderAsPrevious && isSameSenderAsNext) ||
             (isSameSenderAsPrevious && !isSameSenderAsNext),
-          "rounded-tr-[8px] rounded-br-[8px]":
+          "!rounded-tr-[8px] rounded-br-[8px]":
             isSameSenderAsPrevious && isSameSenderAsNext,
         }
       : {
-          "rounded-tl-[8px]":
+          "!rounded-tl-[8px]":
             (!isSameSenderAsPrevious && isSameSenderAsNext) ||
             (isSameSenderAsPrevious && !isSameSenderAsNext),
-          "rounded-tl-[8px] rounded-bl-[8px]":
+          "!rounded-tl-[8px] rounded-bl-[8px]":
             isSameSenderAsPrevious && isSameSenderAsNext,
         }
   );
@@ -190,7 +194,7 @@ export function ChatMessage({
         )}
       </div>
 
-      <div className={cn("flex flex-col max-w-[70%]", isOwnMessage ? "items-end" : "items-start")}>
+      <div className={cn("flex flex-col max-md:max-w-64 max-w-[40rem]", isOwnMessage ? "items-end" : "items-start")}>
         <MessageContextMenu
           messageId={messageId}
           messageContent={content}
@@ -202,38 +206,16 @@ export function ChatMessage({
           isCEO={isCEO}
           onReply={onReply}
         >
-          <div className="cursor-pointer">
-            {replyTo && (
-              <div
-                className={cn(
-                  "mb-2 p-2 rounded-lg border-l-4 bg-gray-50 text-xs",
-                  isOwnMessage ? "border-blue-300" : "border-gray-300"
-                )}
-              >
-                <div className="flex items-center gap-1 text-gray-600 mb-1">
-                  <Reply className="w-3 h-3" />
-                  <span className="font-medium">{replyTo.username}</span>
-                </div>
-                <ReactMarkdown
-                  remarkPlugins={[remarkBreaks]}
-                  components={{
-                    p: ({ node, ...props }) => <p className="truncate" {...props} />,
-                  }}
-                >
-                  {replyTo.content}
-                </ReactMarkdown>
-              </div>
-            )}
-
+          <div className="cursor-pointer max-w-[inherit]">
             <div
               className={cn(
                 "px-4 py-3 pb-1 pt-2 pr-3 max-w-full break-words transition-all hover:shadow-md relative",
                 isOwnMessage
-                  ? "bg-purple-800 text-white hover:bg-blue-600"
-                  : "bg-gray-300 text-gray-900 hover:bg-gray-300",
+                ? "bg-purple-800 text-white hover:bg-blue-600"
+                : "bg-gray-300 text-gray-900 hover:bg-gray-300",
                 messageBorderRadius
               )}
-            >
+              >
               <div className={cn("flex mb-2", isOwnMessage ? "justify-end" : "justify-start")}>
                 <ProfileHoverCard
                   userId={userId}
@@ -246,17 +228,39 @@ export function ChatMessage({
                   currentUserRole={currentUserRole}
                   isCEO={isCEO}
                   canManage={canManage && !isOwnMessage}
-                >
+                  >
                   <span
                     className={cn(
                       "text-xs font-semibold cursor-pointer hover:underline",
                       getUsernameColor(userRole, isOwnMessage)
                     )}
-                  >
+                    >
                     {username}
                   </span>
                 </ProfileHoverCard>
               </div>
+
+              {replyTo && (
+                <div
+                  className={cn(
+                    "mb-2 p-2 rounded-lg border-l-4 bg-gray-50 text-xs",
+                    isOwnMessage ? "border-blue-300" : "border-gray-300"
+                  )}
+                >
+                  <div className="flex items-center gap-1 text-gray-600 mb-1">
+                    <Reply className="w-3 h-3" />
+                    <span className="font-medium">{replyTo.username}</span>
+                  </div>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkBreaks]}
+                    components={{
+                      p: ({ node, ...props }) => <p className="truncate text-gray-600 dark:text-gray-700" {...props} />,
+                    }}
+                  >
+                    {replyTo.content}
+                  </ReactMarkdown>
+                </div>
+              )}
 
               {fileAttachment && (
                 <div className="mb-2 w-full max-w-full">
@@ -270,16 +274,24 @@ export function ChatMessage({
               )}
 
               {useMarkdown ? (
-                <MarkdownRenderer content={content}/>
+                <MarkdownRenderer content={isExpanded || !isLongContent ? content : previewContent} />
               ) : (
                 <p
                   className={cn(
-                    "mb-2",
-                    content.includes("\n") ? "whitespace-pre-wrap" : "whitespace-nowrap"
+                    content.includes("\n") ? "whitespace-pre-wrap" : ""
                   )}
                 >
-                  {content}
+                  {isExpanded || !isLongContent ? content : previewContent}
                 </p>
+              )}
+
+              {isLongContent && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-xs text-blue-500 hover:underline"
+                >
+                  {isExpanded ? "Tampilkan lebih sedikit" : "Baca selengkapnya"}
+                </button>
               )}
 
               <div

@@ -173,7 +173,7 @@ export default function HomePage() {
                 Create Room
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="p-4 max-w-md dark:bg-[#090040] lg:dark:bg-[#090030] mt-[-12vh]">
               <DialogHeader>
                 <DialogTitle>Create New Room</DialogTitle>
                 <DialogDescription>Create a new chat room for others to join</DialogDescription>
@@ -185,6 +185,7 @@ export default function HomePage() {
                     <p className="text-xs text-gray-600">Max: {ROOM_LIMITS.NAME_MAX_LENGTH} characters</p>
                   </div>
                   <Input
+                    className="bg-transparent"
                     id="roomName"
                     value={roomName}
                     onChange={(e) => setRoomName(e.target.value)}
@@ -198,6 +199,7 @@ export default function HomePage() {
                     <p className="text-xs text-gray-600">Max: {ROOM_LIMITS.DESCRIPTION_MAX_LENGTH} characters</p>
                   </div>
                   <Textarea
+                    className="bg-transparent"
                     id="roomDescription"
                     value={roomDescription}
                     onChange={(e) => setRoomDescription(e.target.value)}

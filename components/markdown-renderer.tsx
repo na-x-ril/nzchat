@@ -34,7 +34,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             ),
             em: ({ node, ...props }) => <em className="italic" {...props} />,
             code: ({ node, ...props }) => (
-                <code className="bg-gray-200 rounded px-1" {...props} />
+                <code className="bg-gray-200 dark:bg-white/20 rounded px-1" {...props} />
             ),
             pre: ({ node, ...props }) => (
                 <pre className="bg-gray-900 text-gray-100 rounded p-2 overflow-x-auto text-sm" {...props} />
